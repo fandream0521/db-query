@@ -1,0 +1,401 @@
+openapi: 3.0.3
+info:
+  title: Database Query Tool API
+  description: API for database connection management and query execution
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local development server
+  - url: https://api.example.com/api/v1
+    description: Production server
+
+paths:
+  /dbs:
+    get:
+      summary: Get all stored databases
+      description: Returns a list of all database connections stored in the system
+      operationId: listDatabases
+      tags:
+        - Databases
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DatabaseConnection'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /dbs/{name}:
+    get:
+      summary: Get database metadata
+      description: Returns schema metadata (tables and views) for the specified database
+      operationId: getDatabaseMetadata
+      tags:
+        - Databases
+      parameters:
+        - name: name
+          in: path
+          required: true
+          description: Database connection name
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchemaMetadata'
+        '404':
+          description: Database not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      summary: Add or update a database connection
+      description: Creates a new database connection or updates an existing one
+      operationId: upsertDatabase
+      tags:
+        - Databases
+      parameters:
+        - name: name
+          in: path
+          required: true
+          description: Database connection name
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDatabaseRequest'
+      responses:
+        '200':
+          description: Database connection created or updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabaseConnection'
+        '400':
+          description: Invalid request (e.g., invalid connection URL)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /dbs/{name}/query:
+    post:
+      summary: Execute SQL query
+      description: Executes a SQL SELECT query against the specified database
+      operationId: executeQuery
+      tags:
+        - Queries
+      parameters:
+        - name: name
+          in: path
+          required: true
+          description: Database connection name
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryRequest'
+      responses:
+        '200':
+          description: Query executed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResponse'
+        '400':
+          description: Invalid SQL query (syntax error, non-SELECT statement, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Database not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Query execution error or internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /dbs/{name}/query/natural:
+    post:
+      summary: Generate and execute SQL from natural language
+      description: Converts a natural language query into SQL and executes it
+      operationId: executeNaturalLanguageQuery
+      tags:
+        - Queries
+      parameters:
+        - name: name
+          in: path
+          required: true
+          description: Database connection name
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NaturalLanguageQueryRequest'
+      responses:
+        '200':
+          description: Query generated and executed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResponse'
+        '400':
+          description: Invalid natural language query or generated SQL is invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Database not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: LLM API error, query execution error, or internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    DatabaseConnection:
+      type: object
+      required:
+        - name
+        - url
+        - createdAt
+        - updatedAt
+      properties:
+        name:
+          type: string
+          description: Unique identifier for the database connection
+          example: my-database
+        url:
+          type: string
+          description: Database connection URL
+          example: postgres://postgres:postgres@localhost:5432/postgres
+        createdAt:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp of creation
+          example: '2025-12-14T10:30:00Z'
+        updatedAt:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp of last update
+          example: '2025-12-14T10:30:00Z'
+
+    CreateDatabaseRequest:
+      type: object
+      required:
+        - url
+      properties:
+        url:
+          type: string
+          description: Database connection URL
+          example: postgres://postgres:postgres@localhost:5432/postgres
+
+    SchemaMetadata:
+      type: object
+      required:
+        - dbName
+        - tables
+        - views
+        - updatedAt
+      properties:
+        dbName:
+          type: string
+          description: Database connection name
+          example: my-database
+        tables:
+          type: array
+          description: List of tables in the database
+          items:
+            $ref: '#/components/schemas/TableInfo'
+        views:
+          type: array
+          description: List of views in the database
+          items:
+            $ref: '#/components/schemas/ViewInfo'
+        updatedAt:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp of last metadata update
+          example: '2025-12-14T10:30:00Z'
+
+    TableInfo:
+      type: object
+      required:
+        - name
+        - columns
+      properties:
+        name:
+          type: string
+          description: Table name
+          example: users
+        columns:
+          type: array
+          description: Column definitions
+          items:
+            $ref: '#/components/schemas/ColumnInfo'
+        primaryKey:
+          type: array
+          description: Primary key column names
+          items:
+            type: string
+          example: ['id']
+
+    ViewInfo:
+      type: object
+      required:
+        - name
+        - columns
+      properties:
+        name:
+          type: string
+          description: View name
+          example: active_users
+        columns:
+          type: array
+          description: Column definitions
+          items:
+            $ref: '#/components/schemas/ColumnInfo'
+
+    ColumnInfo:
+      type: object
+      required:
+        - name
+        - dataType
+        - nullable
+      properties:
+        name:
+          type: string
+          description: Column name
+          example: id
+        dataType:
+          type: string
+          description: Column data type
+          example: integer
+        nullable:
+          type: boolean
+          description: Whether the column allows NULL values
+          example: false
+        defaultValue:
+          type: string
+          description: Default value for the column
+          example: null
+          nullable: true
+
+    QueryRequest:
+      type: object
+      required:
+        - sql
+      properties:
+        sql:
+          type: string
+          description: SQL SELECT statement to execute
+          example: SELECT * FROM users LIMIT 10
+
+    NaturalLanguageQueryRequest:
+      type: object
+      required:
+        - prompt
+      properties:
+        prompt:
+          type: string
+          description: Natural language description of the desired query
+          example: 查询用户表的所有信息
+
+    QueryResponse:
+      type: object
+      required:
+        - columns
+        - rows
+        - rowCount
+        - executionTimeMs
+      properties:
+        columns:
+          type: array
+          description: Column names in the result set
+          items:
+            type: string
+          example: ['id', 'name', 'email']
+        rows:
+          type: array
+          description: Result rows (array of arrays)
+          items:
+            type: array
+            items:
+              type: any
+          example:
+            - [1, 'John Doe', 'john@example.com']
+            - [2, 'Jane Smith', 'jane@example.com']
+        rowCount:
+          type: integer
+          description: Number of rows returned
+          example: 2
+        executionTimeMs:
+          type: number
+          description: Query execution time in milliseconds
+          example: 45.2
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: Invalid SQL syntax
+        code:
+          type: string
+          description: Error code for programmatic handling
+          example: INVALID_SQL_SYNTAX
+        details:
+          type: object
+          description: Additional error details
+          additionalProperties: true
+

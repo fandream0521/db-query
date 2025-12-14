@@ -1,61 +1,93 @@
-#!/usr/bin/env bash
+#!/bin/bash
+
+# Script to setup plan directory structure
+# Usage: setup-plan.sh [--json]
 
 set -e
 
-# Parse command line arguments
-JSON_MODE=false
-ARGS=()
+JSON_OUTPUT=false
 
-for arg in "$@"; do
-    case "$arg" in
-        --json) 
-            JSON_MODE=true 
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --json|-Json|-JsonOutput)
+            JSON_OUTPUT=true
+            shift
             ;;
-        --help|-h) 
-            echo "Usage: $0 [--json]"
-            echo "  --json    Output results in JSON format"
-            echo "  --help    Show this help message"
-            exit 0 
-            ;;
-        *) 
-            ARGS+=("$arg") 
+        *)
+            shift
             ;;
     esac
 done
 
-# Get script directory and load common functions
-SCRIPT_DIR="$(CDPATH="" cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/common.sh"
+# Find the feature spec directory
+SPECS_DIR="specs"
+FEATURE_DIR=$(find "$SPECS_DIR" -maxdepth 1 -type d -name "*-*" | head -n 1)
 
-# Get all paths and variables from common functions
-eval $(get_feature_paths)
-
-# Check if we're on a proper feature branch (only for git repos)
-check_feature_branch "$CURRENT_BRANCH" "$HAS_GIT" || exit 1
-
-# Ensure the feature directory exists
-mkdir -p "$FEATURE_DIR"
-
-# Copy plan template if it exists
-TEMPLATE="$REPO_ROOT/.specify/templates/plan-template.md"
-if [[ -f "$TEMPLATE" ]]; then
-    cp "$TEMPLATE" "$IMPL_PLAN"
-    echo "Copied plan template to $IMPL_PLAN"
-else
-    echo "Warning: Plan template not found at $TEMPLATE"
-    # Create a basic plan file if template doesn't exist
-    touch "$IMPL_PLAN"
+if [ -z "$FEATURE_DIR" ]; then
+    echo "Error: No feature directory found in $SPECS_DIR" >&2
+    exit 1
 fi
 
-# Output results
-if $JSON_MODE; then
-    printf '{"FEATURE_SPEC":"%s","IMPL_PLAN":"%s","SPECS_DIR":"%s","BRANCH":"%s","HAS_GIT":"%s"}\n' \
-        "$FEATURE_SPEC" "$IMPL_PLAN" "$FEATURE_DIR" "$CURRENT_BRANCH" "$HAS_GIT"
-else
-    echo "FEATURE_SPEC: $FEATURE_SPEC"
-    echo "IMPL_PLAN: $IMPL_PLAN" 
-    echo "SPECS_DIR: $FEATURE_DIR"
-    echo "BRANCH: $CURRENT_BRANCH"
-    echo "HAS_GIT: $HAS_GIT"
+FEATURE_SPEC="${FEATURE_DIR}/spec.md"
+IMPL_PLAN="${FEATURE_DIR}/plan.md"
+BRANCH=$(basename "$FEATURE_DIR")
+
+# Create plan.md if it doesn't exist
+if [ ! -f "$IMPL_PLAN" ]; then
+    # Copy template if it exists
+    if [ -f ".specify/templates/plan-template.md" ]; then
+        cp ".specify/templates/plan-template.md" "$IMPL_PLAN"
+    else
+        # Create basic template
+        cat > "$IMPL_PLAN" << 'EOF'
+# Implementation Plan: [FEATURE_NAME]
+
+**Feature ID:** [FEATURE_ID]  
+**Status:** Draft  
+**Created:** [DATE]
+
+## Technical Context
+
+[To be filled]
+
+## Constitution Check
+
+[To be filled]
+
+## Gates
+
+[To be filled]
+
+## Phase 0: Research
+
+[To be filled]
+
+## Phase 1: Design
+
+[To be filled]
+
+## Phase 2: Implementation
+
+[To be filled]
+EOF
+    fi
 fi
 
+# Output JSON if requested
+if [ "$JSON_OUTPUT" = true ]; then
+    cat << EOF
+{
+  "feature_spec": "${FEATURE_SPEC}",
+  "impl_plan": "${IMPL_PLAN}",
+  "specs_dir": "${SPECS_DIR}",
+  "branch": "${BRANCH}",
+  "feature_dir": "${FEATURE_DIR}"
+}
+EOF
+else
+    echo "Feature Spec: ${FEATURE_SPEC}"
+    echo "Implementation Plan: ${IMPL_PLAN}"
+    echo "Specs Directory: ${SPECS_DIR}"
+    echo "Branch: ${BRANCH}"
+fi

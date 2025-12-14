@@ -1,0 +1,400 @@
+### Database Query Tool API Tests
+### VSCode REST Client Extension Required
+### https://marketplace.visualstudio.com/items?itemName=humao.rest-client
+
+@baseUrl = http://localhost:8080/api/v1
+@dbName = test-db
+@dbUrl = postgres://postgres:postgres@localhost:5432/postgres
+
+### Variables
+# @baseUrl - API base URL (default: http://localhost:8080/api/v1)
+# @dbName - Database connection name for testing
+# @dbUrl - Database connection URL
+
+###############################################
+# Health Check
+###############################################
+
+### Health Check
+GET http://localhost:8080/health
+
+###############################################
+# Database Management APIs
+###############################################
+
+### 1. List All Databases
+# Get all stored database connections
+GET {{baseUrl}}/dbs
+
+###
+
+### 2. Add/Update Database Connection
+# Create a new database connection or update existing one
+PUT {{baseUrl}}/dbs/{{dbName}}
+Content-Type: application/json
+
+{
+  "url": "{{dbUrl}}"
+}
+
+###
+
+### 3. Add Another Database Connection
+# Add a second database for testing
+PUT {{baseUrl}}/dbs/production-db
+Content-Type: application/json
+
+{
+  "url": "postgres://user:password@prod-server:5432/production"
+}
+
+###
+
+### 4. Get Database Metadata
+# Retrieve schema metadata (tables and views) for a database
+GET {{baseUrl}}/dbs/{{dbName}}
+
+###
+
+### 5. Get Database Metadata (Non-existent)
+# Test 404 error handling
+GET {{baseUrl}}/dbs/non-existent-db
+
+###
+
+### 6. Add Database with Invalid URL
+# Test validation error handling
+PUT {{baseUrl}}/dbs/invalid-db
+Content-Type: application/json
+
+{
+  "url": "invalid://url"
+}
+
+###
+
+###############################################
+# Query Execution APIs
+###############################################
+
+### 7. Execute SQL Query - Simple SELECT
+# Execute a simple SELECT query
+POST {{baseUrl}}/dbs/{{dbName}}/query
+Content-Type: application/json
+
+{
+  "sql": "SELECT * FROM users LIMIT 10"
+}
+
+###
+
+### 8. Execute SQL Query - With WHERE Clause
+# Execute a SELECT query with WHERE condition
+POST {{baseUrl}}/dbs/{{dbName}}/query
+Content-Type: application/json
+
+{
+  "sql": "SELECT id, name, email FROM users WHERE id > 100 LIMIT 50"
+}
+
+###
+
+### 9. Execute SQL Query - Without LIMIT (should auto-add LIMIT 1000)
+# Test automatic LIMIT addition
+POST {{baseUrl}}/dbs/{{dbName}}/query
+Content-Type: application/json
+
+{
+  "sql": "SELECT * FROM users"
+}
+
+###
+
+### 10. Execute SQL Query - Invalid SQL Syntax
+# Test SQL validation error handling
+POST {{baseUrl}}/dbs/{{dbName}}/query
+Content-Type: application/json
+
+{
+  "sql": "SELECT * FROM users WHERE"
+}
+
+###
+
+### 11. Execute SQL Query - Non-SELECT Statement (should be rejected)
+# Test that only SELECT statements are allowed
+POST {{baseUrl}}/dbs/{{dbName}}/query
+Content-Type: application/json
+
+{
+  "sql": "INSERT INTO users (name) VALUES ('test')"
+}
+
+###
+
+### 12. Execute SQL Query - UPDATE Statement (should be rejected)
+# Test that UPDATE statements are rejected
+POST {{baseUrl}}/dbs/{{dbName}}/query
+Content-Type: application/json
+
+{
+  "sql": "UPDATE users SET name = 'test' WHERE id = 1"
+}
+
+###
+
+### 13. Execute SQL Query - DELETE Statement (should be rejected)
+# Test that DELETE statements are rejected
+POST {{baseUrl}}/dbs/{{dbName}}/query
+Content-Type: application/json
+
+{
+  "sql": "DELETE FROM users WHERE id = 1"
+}
+
+###
+
+### 14. Execute SQL Query - Complex JOIN Query
+# Test complex query with JOIN
+POST {{baseUrl}}/dbs/{{dbName}}/query
+Content-Type: application/json
+
+{
+  "sql": "SELECT u.id, u.name, p.title FROM users u JOIN posts p ON u.id = p.user_id LIMIT 20"
+}
+
+###
+
+### 15. Execute SQL Query - Query Non-existent Database
+# Test 404 error for non-existent database
+POST {{baseUrl}}/dbs/non-existent-db/query
+Content-Type: application/json
+
+{
+  "sql": "SELECT * FROM users LIMIT 10"
+}
+
+###
+
+###############################################
+# Natural Language Query APIs
+###############################################
+
+### 16. Natural Language Query - Simple Request
+# Generate and execute SQL from natural language (Chinese)
+POST {{baseUrl}}/dbs/{{dbName}}/query/natural
+Content-Type: application/json
+
+{
+  "prompt": "查询用户表的所有信息"
+}
+
+###
+
+### 17. Natural Language Query - English Request
+# Generate and execute SQL from natural language (English)
+POST {{baseUrl}}/dbs/{{dbName}}/query/natural
+Content-Type: application/json
+
+{
+  "prompt": "Show me all users from the users table"
+}
+
+###
+
+### 18. Natural Language Query - With Condition
+# Natural language query with condition
+POST {{baseUrl}}/dbs/{{dbName}}/query/natural
+Content-Type: application/json
+
+{
+  "prompt": "查询ID大于100的用户，只显示前50条"
+}
+
+###
+
+### 19. Natural Language Query - Complex Request
+# Complex natural language query
+POST {{baseUrl}}/dbs/{{dbName}}/query/natural
+Content-Type: application/json
+
+{
+  "prompt": "显示用户表和文章表的关联信息，包括用户ID、用户名和文章标题"
+}
+
+###
+
+### 20. Natural Language Query - Ambiguous Request
+# Test handling of ambiguous queries
+POST {{baseUrl}}/dbs/{{dbName}}/query/natural
+Content-Type: application/json
+
+{
+  "prompt": "给我一些数据"
+}
+
+###
+
+### 21. Natural Language Query - Non-existent Database
+# Test 404 error for non-existent database
+POST {{baseUrl}}/dbs/non-existent-db/query/natural
+Content-Type: application/json
+
+{
+  "prompt": "查询用户表"
+}
+
+###
+
+###############################################
+# Error Handling Tests
+###############################################
+
+### 22. Invalid JSON Request Body
+# Test error handling for invalid JSON
+POST {{baseUrl}}/dbs/{{dbName}}/query
+Content-Type: application/json
+
+{
+  "sql": "SELECT * FROM users"
+  "invalid": "json"
+}
+
+###
+
+### 23. Missing Required Field
+# Test error handling for missing required fields
+POST {{baseUrl}}/dbs/{{dbName}}/query
+Content-Type: application/json
+
+{
+  "query": "SELECT * FROM users"
+}
+
+###
+
+### 24. Empty SQL Query
+# Test error handling for empty SQL
+POST {{baseUrl}}/dbs/{{dbName}}/query
+Content-Type: application/json
+
+{
+  "sql": ""
+}
+
+###
+
+### 25. Empty Natural Language Prompt
+# Test error handling for empty prompt
+POST {{baseUrl}}/dbs/{{dbName}}/query/natural
+Content-Type: application/json
+
+{
+  "prompt": ""
+}
+
+###
+
+###############################################
+# Integration Test Flow
+###############################################
+
+### 26. Complete Workflow Test - Step 1: Add Database
+# Step 1: Add a database connection
+PUT {{baseUrl}}/dbs/integration-test-db
+Content-Type: application/json
+
+{
+  "url": "{{dbUrl}}"
+}
+
+###
+
+### 27. Complete Workflow Test - Step 2: List Databases
+# Step 2: Verify database was added
+GET {{baseUrl}}/dbs
+
+###
+
+### 28. Complete Workflow Test - Step 3: Get Schema Metadata
+# Step 3: Retrieve schema metadata
+GET {{baseUrl}}/dbs/integration-test-db
+
+###
+
+### 29. Complete Workflow Test - Step 4: Execute SQL Query
+# Step 4: Execute a query
+POST {{baseUrl}}/dbs/integration-test-db/query
+Content-Type: application/json
+
+{
+  "sql": "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' LIMIT 10"
+}
+
+###
+
+### 30. Complete Workflow Test - Step 5: Natural Language Query
+# Step 5: Execute natural language query
+POST {{baseUrl}}/dbs/integration-test-db/query/natural
+Content-Type: application/json
+
+{
+  "prompt": "列出所有表名"
+}
+
+###
+
+###############################################
+# Performance Tests
+###############################################
+
+### 31. Large Result Set Query
+# Test query that returns many rows (should be limited to 1000)
+POST {{baseUrl}}/dbs/{{dbName}}/query
+Content-Type: application/json
+
+{
+  "sql": "SELECT * FROM large_table"
+}
+
+###
+
+### 32. Complex Query Performance
+# Test complex query performance
+POST {{baseUrl}}/dbs/{{dbName}}/query
+Content-Type: application/json
+
+{
+  "sql": "SELECT u.*, COUNT(p.id) as post_count FROM users u LEFT JOIN posts p ON u.id = p.user_id GROUP BY u.id LIMIT 100"
+}
+
+###
+
+###############################################
+# Notes
+###############################################
+
+# Usage Instructions:
+# 1. Install VSCode REST Client extension
+# 2. Update @baseUrl, @dbName, and @dbUrl variables at the top
+# 3. Click "Send Request" above each request to execute
+# 4. View response in the output panel
+#
+# Test Scenarios Covered:
+# - Health check
+# - Database CRUD operations
+# - Schema metadata retrieval
+# - SQL query execution (valid and invalid)
+# - Natural language query execution
+# - Error handling (404, 400, 500)
+# - Validation (invalid URLs, non-SELECT statements)
+# - Integration workflow
+# - Performance testing
+#
+# Expected Behaviors:
+# - Only SELECT statements are allowed
+# - LIMIT 1000 is automatically added if missing
+# - All JSON responses use camelCase format
+# - CORS allows all origins
+# - Clear error messages for all failure scenarios
+
