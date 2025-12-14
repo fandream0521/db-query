@@ -231,3 +231,17 @@
 .ant-typography {
   word-break: break-word;
 }
+
+/* First column collapse animation */
+.first-column-collapsed {
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Smooth transitions for layout shifts */
+.ant-layout-sider {
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), left 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.ant-layout-content {
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}

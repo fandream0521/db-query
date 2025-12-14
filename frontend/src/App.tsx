@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Layout, Typography, Button, Space, Input, Card, Row, Col, Spin, Badge, Tree, Tooltip } from 'antd';
-import { PlusOutlined, ReloadOutlined, SearchOutlined, PlayCircleOutlined, DatabaseOutlined } from '@ant-design/icons';
+import { PlusOutlined, ReloadOutlined, PlayCircleOutlined, DatabaseOutlined } from '@ant-design/icons';
 import AddDatabaseForm from './components/AddDatabaseForm';
 import SQLEditor from './components/SQLEditor';
 import QueryResults from './components/QueryResults';
@@ -31,6 +31,7 @@ function App() {
   const [queryLoading, setQueryLoading] = useState(false);
   const [executionTime, setExecutionTime] = useState<string>('-');
   const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([]);
+  const [firstColumnCollapsed, setFirstColumnCollapsed] = useState(false);
 
   // Load databases
   useEffect(() => {
@@ -234,125 +235,247 @@ function App() {
     <Layout style={{ minHeight: '100vh', background: '#f5f5f5' }}>
       {/* First Column - Database List */}
       <Sider
-        width={224}
+        width={firstColumnCollapsed ? 64 : 224}
         style={{
           background: '#fff',
           borderRight: '1px solid #e8e8e8',
-          overflow: 'auto',
+          overflow: 'hidden',
           height: '100vh',
           position: 'fixed',
           left: 0,
           top: 0,
+          transition: 'width 0.3s ease',
+          zIndex: 2,
         }}
       >
         {/* Header */}
-        <div style={{ padding: '20px', borderBottom: '1px solid #f0f0f0' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-            <DatabaseOutlined style={{ fontSize: '24px', color: '#1890ff' }} />
-            <Title level={4} style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>
-              DB QUERY TOOL
-            </Title>
+        <div style={{ 
+          padding: firstColumnCollapsed ? '20px 12px' : '20px', 
+          borderBottom: '1px solid #f0f0f0', 
+          position: 'relative',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: firstColumnCollapsed ? 'center' : 'stretch',
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+        }}>
+          <div 
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '12px', 
+              marginBottom: '16px',
+              cursor: 'pointer',
+              userSelect: 'none',
+              justifyContent: firstColumnCollapsed ? 'center' : 'flex-start',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+            }}
+            onClick={() => setFirstColumnCollapsed(!firstColumnCollapsed)}
+          >
+            {!firstColumnCollapsed && (
+              <Title 
+                level={4} 
+                style={{ 
+                  margin: 0, 
+                  fontSize: '18px', 
+                  fontWeight: 600, 
+                  whiteSpace: 'nowrap', 
+                  overflow: 'hidden',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                }}
+              >
+                DB QUERY TOOL
+              </Title>
+            )}
+            <DatabaseOutlined 
+              style={{ 
+                fontSize: '24px', 
+                color: '#1890ff', 
+                flexShrink: 0,
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                transform: firstColumnCollapsed ? 'scale(0.9)' : 'scale(1)'
+              }} 
+            />
           </div>
           <Button
             type="primary"
             icon={<PlusOutlined />}
-            block
+            block={!firstColumnCollapsed}
             onClick={() => setShowAddForm(true)}
             style={{ 
               height: '40px',
               fontSize: '14px',
-              borderRadius: '6px'
+              borderRadius: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: firstColumnCollapsed ? '0' : '4px 15px',
+              width: firstColumnCollapsed ? '40px' : '100%',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              overflow: 'hidden',
+              whiteSpace: 'nowrap'
             }}
+            title={firstColumnCollapsed ? 'Add Database' : undefined}
           >
-            ADD DATABASE
+            {!firstColumnCollapsed && (
+              <span style={{
+                transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                display: 'inline-block'
+              }}>
+                ADD DATABASE
+              </span>
+            )}
           </Button>
         </div>
 
         {/* Database List Body */}
-        <div style={{ padding: '16px' }}>
+        <div style={{ 
+          padding: firstColumnCollapsed ? '16px 12px' : '16px', 
+          overflow: 'auto', 
+          height: 'calc(100vh - 120px)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: firstColumnCollapsed ? 'center' : 'stretch',
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+        }}>
           {loading ? (
             <Spin size="large" style={{ display: 'block', textAlign: 'center', padding: '40px' }} />
           ) : databases.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
-              <Text type="secondary">No databases added</Text>
+              {!firstColumnCollapsed && <Text type="secondary">No databases added</Text>}
             </div>
           ) : (
             <div>
               {databases.map((db) => {
                 const isSelected = selectedDb?.name === db.name;
                 return (
-                  <div
+                  <Tooltip 
                     key={db.name}
-                    onClick={() => handleDatabaseSelect(db)}
-                    className="database-item"
-                    style={{
-                      padding: '14px 16px',
-                      marginBottom: '8px',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      background: isSelected ? '#f0f7ff' : 'transparent',
-                      border: isSelected ? '1px solid #1890ff' : '1px solid #f0f0f0',
-                      transition: 'all 0.2s',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isSelected) {
-                        e.currentTarget.style.background = '#fafafa';
-                        e.currentTarget.style.borderColor = '#d9d9d9';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isSelected) {
-                        e.currentTarget.style.background = 'transparent';
-                        e.currentTarget.style.borderColor = '#f0f0f0';
-                      }
-                    }}
+                    title={firstColumnCollapsed ? db.name : undefined}
+                    placement="right"
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
-                        {isSelected && (
-                          <div
-                            style={{
-                              width: '6px',
-                              height: '6px',
-                              borderRadius: '50%',
-                              background: '#52c41a',
-                              flexShrink: 0,
-                            }}
-                          />
-                        )}
-                        <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-                          <Text 
-                            strong={isSelected} 
-                            ellipsis
-                            style={{ 
-                              fontSize: '13px',
-                              color: isSelected ? '#1890ff' : '#262626',
-                              display: 'block',
-                              marginBottom: '4px',
-                              width: '100%'
-                            }}
-                          >
-                            {db.name}
-                          </Text>
-                          <Tooltip title={db.url} placement="right">
-                            <Text 
-                              type="secondary" 
-                              ellipsis
-                              style={{ 
-                                fontSize: '11px', 
-                                display: 'block',
-                                width: '100%',
-                                cursor: 'help'
+                    <div
+                      onClick={() => handleDatabaseSelect(db)}
+                      className="database-item"
+                      style={{
+                        padding: firstColumnCollapsed ? '12px' : '14px 16px',
+                        marginBottom: '8px',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        background: isSelected ? '#f0f7ff' : 'transparent',
+                        border: isSelected ? '1px solid #1890ff' : '1px solid #f0f0f0',
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: firstColumnCollapsed ? 'center' : 'space-between',
+                        width: firstColumnCollapsed ? '40px' : '100%',
+                        boxSizing: 'border-box',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isSelected) {
+                          e.currentTarget.style.background = '#fafafa';
+                          e.currentTarget.style.borderColor = '#d9d9d9';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isSelected) {
+                          e.currentTarget.style.background = 'transparent';
+                          e.currentTarget.style.borderColor = '#f0f0f0';
+                        }
+                      }}
+                    >
+                      {firstColumnCollapsed ? (
+                        <div style={{ 
+                          display: 'flex', 
+                          flexDirection: 'column', 
+                          alignItems: 'center', 
+                          gap: '4px',
+                          width: '100%',
+                          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                        }}>
+                          {isSelected && (
+                            <div
+                              style={{
+                                width: '6px',
+                                height: '6px',
+                                borderRadius: '50%',
+                                background: '#52c41a',
+                                transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                               }}
-                            >
-                              {db.url.replace(/\/\/.*@/, '//***@')}
-                            </Text>
-                          </Tooltip>
+                            />
+                          )}
+                          <DatabaseOutlined 
+                            style={{ 
+                              fontSize: '20px', 
+                              color: isSelected ? '#1890ff' : '#262626',
+                              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                            }} 
+                          />
                         </div>
-                      </div>
-                      <Badge count={0} showZero style={{ backgroundColor: '#d9d9d9', flexShrink: 0 }} />
+                      ) : (
+                        <>
+                          <div style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '8px', 
+                            flex: 1, 
+                            minWidth: 0,
+                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                          }}>
+                            {isSelected && (
+                              <div
+                                style={{
+                                  width: '6px',
+                                  height: '6px',
+                                  borderRadius: '50%',
+                                  background: '#52c41a',
+                                  flexShrink: 0,
+                                  transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                }}
+                              />
+                            )}
+                            <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+                              <Text 
+                                strong={isSelected} 
+                                ellipsis
+                                style={{ 
+                                  fontSize: '13px',
+                                  color: isSelected ? '#1890ff' : '#262626',
+                                  display: 'block',
+                                  marginBottom: '4px',
+                                  width: '100%'
+                                }}
+                              >
+                                {db.name}
+                              </Text>
+                              <Tooltip title={db.url} placement="right">
+                                <Text 
+                                  type="secondary" 
+                                  ellipsis
+                                  style={{ 
+                                    fontSize: '11px', 
+                                    display: 'block',
+                                    width: '100%',
+                                    cursor: 'help'
+                                  }}
+                                >
+                                  {db.url.replace(/\/\/.*@/, '//***@')}
+                                </Text>
+                              </Tooltip>
+                            </div>
+                          </div>
+                          <Badge 
+                            count={0} 
+                            showZero 
+                            style={{ 
+                              backgroundColor: '#d9d9d9', 
+                              flexShrink: 0,
+                              transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                            }} 
+                          />
+                        </>
+                      )}
                     </div>
-                  </div>
+                  </Tooltip>
                 );
               })}
             </div>
@@ -369,9 +492,10 @@ function App() {
           overflow: 'auto',
           height: '100vh',
           position: 'fixed',
-          left: 224,
+          left: firstColumnCollapsed ? 64 : 224,
           top: 0,
           zIndex: 1,
+          transition: 'left 0.3s ease',
         }}
       >
         {selectedDb ? (
@@ -437,7 +561,7 @@ function App() {
       </Sider>
 
       {/* Third Column - Statistics and Query Panel */}
-      <Layout style={{ marginLeft: 480, background: '#f5f5f5' }}>
+      <Layout style={{ marginLeft: firstColumnCollapsed ? 320 : 480, background: '#f5f5f5', transition: 'margin-left 0.3s ease' }}>
         <Content style={{ padding: '12px 24px 12px 24px', background: '#f5f5f5', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
           {selectedDb ? (
             <>
