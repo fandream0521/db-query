@@ -1,7 +1,6 @@
 use crate::error::AppError;
 use crate::models::schema::SchemaMetadata;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 
 pub struct LLMService {
     api_key: String,

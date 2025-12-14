@@ -1,5 +1,5 @@
 use crate::error::AppError;
-use sqlparser::ast::{Statement, Query, SetExpr, SelectItem, Expr};
+use sqlparser::ast::{Statement, Query, SetExpr};
 use sqlparser::dialect::PostgreSqlDialect;
 use sqlparser::parser::Parser;
 

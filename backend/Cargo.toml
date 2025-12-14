@@ -37,3 +37,10 @@ chrono = { version = "0.4", features = ["serde"] }
 # Logging
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# HTTP for testing
+hyper = { version = "1", features = ["full"] }
+tower = "0.4"
+
+[dev-dependencies]
+tokio-test = "0.4"

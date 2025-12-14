@@ -118,3 +118,123 @@ impl DatabaseService {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::init_db;
+    use std::fs;
+
+    fn setup_test_db() -> Arc<Mutex<Connection>> {
+        let test_db_path = "test_db_query.db";
+        // Remove test DB if exists
+        let _ = fs::remove_file(test_db_path);
+        
+        let conn = init_db(test_db_path).expect("Failed to create test database");
+        Arc::new(Mutex::new(conn))
+    }
+
+    fn cleanup_test_db() {
+        let _ = fs::remove_file("test_db_query.db");
+    }
+
+    #[test]
+    fn test_store_and_get_connection() {
+        let sqlite_conn = setup_test_db();
+        let service = DatabaseService::new(sqlite_conn);
+
+        let request = CreateDatabaseRequest {
+            url: "postgres://user:pass@localhost:5432/testdb".to_string(),
+        };
+
+        let result = service.store_connection("test_db", &request);
+        assert!(result.is_ok());
+
+        let connection = service.get_connection("test_db").unwrap();
+        assert_eq!(connection.name, "test_db");
+        assert_eq!(connection.url, request.url);
+
+        cleanup_test_db();
+    }
+
+    #[test]
+    fn test_list_connections() {
+        let sqlite_conn = setup_test_db();
+        let service = DatabaseService::new(sqlite_conn);
+
+        let request1 = CreateDatabaseRequest {
+            url: "postgres://user:pass@localhost:5432/db1".to_string(),
+        };
+        let request2 = CreateDatabaseRequest {
+            url: "postgres://user:pass@localhost:5432/db2".to_string(),
+        };
+
+        service.store_connection("db1", &request1).unwrap();
+        service.store_connection("db2", &request2).unwrap();
+
+        let connections = service.list_connections().unwrap();
+        assert_eq!(connections.len(), 2);
+        assert!(connections.iter().any(|c| c.name == "db1"));
+        assert!(connections.iter().any(|c| c.name == "db2"));
+
+        cleanup_test_db();
+    }
+
+    #[test]
+    fn test_delete_connection() {
+        let sqlite_conn = setup_test_db();
+        let service = DatabaseService::new(sqlite_conn);
+
+        let request = CreateDatabaseRequest {
+            url: "postgres://user:pass@localhost:5432/testdb".to_string(),
+        };
+
+        service.store_connection("test_db", &request).unwrap();
+        assert!(service.get_connection("test_db").is_ok());
+
+        service.delete_connection("test_db").unwrap();
+        assert!(service.get_connection("test_db").is_err());
+
+        cleanup_test_db();
+    }
+
+    #[test]
+    fn test_get_nonexistent_connection() {
+        let sqlite_conn = setup_test_db();
+        let service = DatabaseService::new(sqlite_conn);
+
+        let result = service.get_connection("nonexistent");
+        assert!(result.is_err());
+
+        cleanup_test_db();
+    }
+
+    #[test]
+    fn test_invalid_database_name() {
+        let sqlite_conn = setup_test_db();
+        let service = DatabaseService::new(sqlite_conn);
+
+        let request = CreateDatabaseRequest {
+            url: "postgres://user:pass@localhost:5432/testdb".to_string(),
+        };
+
+        let result = service.store_connection("invalid name with spaces", &request);
+        assert!(result.is_err());
+
+        cleanup_test_db();
+    }
+
+    #[test]
+    fn test_invalid_database_url() {
+        let sqlite_conn = setup_test_db();
+        let service = DatabaseService::new(sqlite_conn);
+
+        let request = CreateDatabaseRequest {
+            url: "invalid-url".to_string(),
+        };
+
+        let result = service.store_connection("test_db", &request);
+        assert!(result.is_err());
+
+        cleanup_test_db();
+    }
+}

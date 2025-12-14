@@ -277,9 +277,9 @@ Setup → Foundational → US1 → US2 → US3 → US4
 
 ### Testing
 
-- [ ] T088 [P] Write unit tests for backend services (database_service, schema_service, sql_validator)
-- [ ] T089 [P] Write integration tests for API endpoints
-- [ ] T090 [P] Write frontend component tests for key components
+- [x] T088 [P] Write unit tests for backend services (database_service, schema_service, sql_validator)
+- [x] T089 [P] Write integration tests for API endpoints
+- [x] T090 [P] Write frontend component tests for key components
 
 ---
 

@@ -44,10 +44,12 @@ impl QueryExecutor {
             result_rows.push(row_values);
         }
         
+        let row_count = result_rows.len();
+        
         Ok(QueryResponse {
             columns,
             rows: result_rows,
-            row_count: result_rows.len(),
+            row_count,
             execution_time_ms: execution_time,
         })
     }

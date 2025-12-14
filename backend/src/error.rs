@@ -79,3 +79,9 @@ impl From<anyhow::Error> for AppError {
     }
 }
 
+impl From<serde_json::Error> for AppError {
+    fn from(err: serde_json::Error) -> Self {
+        AppError::InternalError(format!("JSON parsing error: {}", err))
+    }
+}
+

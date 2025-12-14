@@ -16,7 +16,7 @@ mod services;
 mod utils;
 mod types;
 
-use api::databases::{SharedDatabaseService, SharedSchemaService, list_databases, get_database, get_database_metadata, upsert_database, delete_database};
+use api::databases::{SharedDatabaseService, SharedSchemaService, list_databases, get_database_metadata, upsert_database, delete_database};
 use api::queries::{execute_query, execute_natural_language_query};
 use db::init_db;
 use config::Config;
@@ -54,11 +54,11 @@ async fn main() {
     let app = Router::new()
         .route("/health", get(health_check))
         .route("/api/v1/dbs", get(list_databases))
-        .route("/api/v1/dbs/:name", get(get_database_metadata))
-        .route("/api/v1/dbs/:name", put(upsert_database))
-        .route("/api/v1/dbs/:name", delete(delete_database))
-        .route("/api/v1/dbs/:name/query", post(execute_query))
-        .route("/api/v1/dbs/:name/query/natural", post(execute_natural_language_query))
+        .route("/api/v1/dbs/{name}", get(get_database_metadata))
+        .route("/api/v1/dbs/{name}", put(upsert_database))
+        .route("/api/v1/dbs/{name}", delete(delete_database))
+        .route("/api/v1/dbs/{name}/query", post(execute_query))
+        .route("/api/v1/dbs/{name}/query/natural", post(execute_natural_language_query))
         .with_state((db_service, schema_service))
         .layer(cors);
 
