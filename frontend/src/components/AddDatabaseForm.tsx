@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
-import { Form, Input, Button, Card, Typography, Space, Modal } from 'antd';
+import { Form, Input, Button, Space, Modal } from 'antd';
 import { CreateDatabaseRequest } from '../types/database';
 import { upsertDatabase } from '../api/database';
 import { showError, showSuccess } from '../utils/error';
-
-const { Title } = Typography;
 
 interface AddDatabaseFormProps {
   onSuccess?: () => void;

@@ -2,9 +2,12 @@ use std::env;
 use dotenv::dotenv;
 
 pub struct Config {
+    #[allow(dead_code)]
     pub database_url: String,
     pub sqlite_db_path: String,
+    #[allow(dead_code)]
     pub llm_api_key: String,
+    #[allow(dead_code)]
     pub llm_api_url: String,
     pub port: u16,
 }

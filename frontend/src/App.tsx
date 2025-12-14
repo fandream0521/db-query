@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Layout, Typography, Button, Space, Input, Card, Row, Col, Spin, Badge, Tree, Tooltip } from 'antd';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Layout, Typography, Button, Card, Spin, Badge, Tree, Tooltip } from 'antd';
 import { PlusOutlined, ReloadOutlined, PlayCircleOutlined, DatabaseOutlined } from '@ant-design/icons';
 import AddDatabaseForm from './components/AddDatabaseForm';
 import SQLEditor from './components/SQLEditor';
@@ -16,7 +16,6 @@ import './App.css';
 
 const { Sider, Content } = Layout;
 const { Title, Text } = Typography;
-const { TreeNode } = Tree;
 
 function App() {
   const [selectedDb, setSelectedDb] = useState<DatabaseConnection | null>(null);
@@ -25,7 +24,6 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [schemaLoading, setSchemaLoading] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [searchText, setSearchText] = useState('');
   const [sql, setSql] = useState<string>('SELECT * FROM');
   const [queryResult, setQueryResult] = useState<QueryResponse | null>(null);
   const [queryLoading, setQueryLoading] = useState(false);
@@ -33,21 +31,7 @@ function App() {
   const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([]);
   const [firstColumnCollapsed, setFirstColumnCollapsed] = useState(false);
 
-  // Load databases
-  useEffect(() => {
-    loadDatabases();
-  }, []);
-
-  // Load schema when database is selected
-  useEffect(() => {
-    if (selectedDb) {
-      loadSchema(selectedDb.name);
-    } else {
-      setSchema(null);
-    }
-  }, [selectedDb]);
-
-  const loadDatabases = async () => {
+  const loadDatabases = useCallback(async () => {
     setLoading(true);
     try {
       const data = await listDatabases();
@@ -61,7 +45,21 @@ function App() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedDb]);
+
+  // Load databases
+  useEffect(() => {
+    loadDatabases();
+  }, [loadDatabases]);
+
+  // Load schema when database is selected
+  useEffect(() => {
+    if (selectedDb) {
+      loadSchema(selectedDb.name);
+    } else {
+      setSchema(null);
+    }
+  }, [selectedDb]);
 
   const loadSchema = async (dbName: string) => {
     setSchemaLoading(true);
@@ -228,8 +226,6 @@ function App() {
       },
     ];
   };
-
-  const totalRows = schema?.tables.reduce((sum, table) => sum + (table.rowCount || 0), 0) || 0;
 
   return (
     <Layout style={{ minHeight: '100vh', background: '#f5f5f5' }}>
@@ -617,7 +613,7 @@ function App() {
                   </div>
                   <div>
                     <Text style={{ fontSize: '18px', fontWeight: 600, color: '#262626' }}>
-                      {totalRows}
+                      {queryResult?.rowCount ?? 0}
                     </Text>
                   </div>
                 </Card>

@@ -24,9 +24,15 @@ impl SchemaService {
         // Check if database exists
         self.db_service.get_connection(db_name)?;
 
-        // Check cache first
+        // Check cache first, but only use it if all tables have row_count
         if let Ok(cached) = self.get_cached_metadata(db_name) {
-            return Ok(cached);
+            // Check if cached data has row_count for all tables
+            let has_all_row_counts = cached.tables.iter().all(|table| table.row_count.is_some());
+            if has_all_row_counts {
+                return Ok(cached);
+            }
+            // If cache is missing row_count, clear it and fetch fresh data
+            self.clear_cache(db_name)?;
         }
 
         // Retrieve from target database
@@ -96,6 +102,20 @@ impl SchemaService {
             .fetch_all(&pool)
             .await?;
 
+            // Get row count for this table
+            let row_count: Option<u64> = match sqlx::query_scalar::<_, i64>(
+                &format!("SELECT COUNT(*) FROM \"{}\"", table_name)
+            )
+            .fetch_one(&pool)
+            .await
+            {
+                Ok(count) => Some(count as u64),
+                Err(e) => {
+                    eprintln!("Failed to get row count for table {}: {}", table_name, e);
+                    None
+                }
+            };
+
             let column_infos: Vec<ColumnInfo> = columns
                 .into_iter()
                 .map(|(name, data_type, nullable, default_value)| {
@@ -112,6 +132,7 @@ impl SchemaService {
                 name: table_name,
                 columns: column_infos,
                 primary_key: if primary_key.is_empty() { None } else { Some(primary_key) },
+                row_count,
             });
         }
 
@@ -208,10 +229,15 @@ impl SchemaService {
                     .and_then(|v| v.as_array())
                     .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect());
 
+                let row_count = metadata
+                    .get("rowCount")
+                    .and_then(|v| v.as_u64());
+
                 tables.push(TableInfo {
                     name: table_name,
                     columns,
                     primary_key,
+                    row_count,
                 });
             } else {
                 views.push(ViewInfo {
@@ -229,6 +255,13 @@ impl SchemaService {
         })
     }
 
+    /// Clear cache for a database
+    fn clear_cache(&self, db_name: &str) -> Result<(), AppError> {
+        let conn = self.sqlite_conn.lock().unwrap();
+        conn.execute("DELETE FROM schema_metadata WHERE db_name = ?1", [db_name])?;
+        Ok(())
+    }
+
     /// Cache metadata in SQLite
     fn cache_metadata(&self, db_name: &str, metadata: &SchemaMetadata) -> Result<(), AppError> {
         let conn = self.sqlite_conn.lock().unwrap();
@@ -242,6 +275,7 @@ impl SchemaService {
             let metadata_json = serde_json::json!({
                 "columns": table.columns,
                 "primaryKey": table.primary_key,
+                "rowCount": table.row_count,
             });
 
             conn.execute(

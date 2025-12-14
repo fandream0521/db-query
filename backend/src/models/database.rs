@@ -11,6 +11,7 @@ pub struct DatabaseConnection {
 }
 
 impl DatabaseConnection {
+    #[allow(dead_code)]
     pub fn new(name: String, url: String) -> Self {
         let now = Utc::now().to_rfc3339();
         Self {
@@ -21,6 +22,7 @@ impl DatabaseConnection {
         }
     }
 
+    #[allow(dead_code)]
     pub fn update_timestamp(&mut self) {
         self.updated_at = Utc::now().to_rfc3339();
     }

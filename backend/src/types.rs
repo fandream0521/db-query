@@ -3,6 +3,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Timestamp {
@@ -10,6 +11,7 @@ pub struct Timestamp {
     pub updated_at: DateTime<Utc>,
 }
 
+#[allow(dead_code)]
 impl Timestamp {
     pub fn new() -> Self {
         let now = Utc::now();
@@ -24,6 +26,7 @@ impl Timestamp {
     }
 }
 
+#[allow(dead_code)]
 impl Default for Timestamp {
     fn default() -> Self {
         Self::new()

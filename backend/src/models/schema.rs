@@ -16,6 +16,8 @@ pub struct TableInfo {
     pub columns: Vec<ColumnInfo>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub primary_key: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub row_count: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
