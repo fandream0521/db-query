@@ -9,6 +9,7 @@ export interface TableInfo {
   name: string;
   columns: ColumnInfo[];
   primaryKey?: string[];
+  rowCount?: number;
 }
 
 export interface ViewInfo {

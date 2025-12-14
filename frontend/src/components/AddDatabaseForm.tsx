@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Form, Input, Button, Card, Typography, Space } from 'antd';
+import { Form, Input, Button, Card, Typography, Space, Modal } from 'antd';
 import { CreateDatabaseRequest } from '../types/database';
 import { upsertDatabase } from '../api/database';
 import { showError, showSuccess } from '../utils/error';
@@ -8,9 +8,10 @@ const { Title } = Typography;
 
 interface AddDatabaseFormProps {
   onSuccess?: () => void;
+  onCancel?: () => void;
 }
 
-const AddDatabaseForm: React.FC<AddDatabaseFormProps> = ({ onSuccess }) => {
+const AddDatabaseForm: React.FC<AddDatabaseFormProps> = ({ onSuccess, onCancel }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
 
@@ -32,50 +33,56 @@ const AddDatabaseForm: React.FC<AddDatabaseFormProps> = ({ onSuccess }) => {
   };
 
   return (
-    <Card>
-      <Space direction="vertical" style={{ width: '100%' }} size="large">
-        <Title level={4}>Add Database Connection</Title>
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleSubmit}
-          autoComplete="off"
+    <Modal
+      title="Add Database Connection"
+      open={true}
+      onCancel={onCancel}
+      footer={null}
+      width={600}
+    >
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={handleSubmit}
+        autoComplete="off"
+      >
+        <Form.Item
+          label="Database Name"
+          name="name"
+          rules={[
+            { required: true, message: 'Please enter a database name' },
+            { pattern: /^[a-zA-Z0-9_-]+$/, message: 'Name can only contain letters, numbers, dashes, and underscores' },
+          ]}
         >
-          <Form.Item
-            label="Database Name"
-            name="name"
-            rules={[
-              { required: true, message: 'Please enter a database name' },
-              { pattern: /^[a-zA-Z0-9_-]+$/, message: 'Name can only contain letters, numbers, dashes, and underscores' },
-            ]}
-          >
-            <Input placeholder="e.g., my-database" />
-          </Form.Item>
+          <Input placeholder="e.g., my-database" />
+        </Form.Item>
 
-          <Form.Item
-            label="Connection URL"
-            name="url"
-            rules={[
-              { required: true, message: 'Please enter a database URL' },
-              {
-                pattern: /^(postgres|postgresql|mysql|sqlite):\/\/.+/,
-                message: 'Invalid database URL format',
-              },
-            ]}
-          >
-            <Input
-              placeholder="e.g., postgres://user:password@localhost:5432/dbname"
-            />
-          </Form.Item>
+        <Form.Item
+          label="Connection URL"
+          name="url"
+          rules={[
+            { required: true, message: 'Please enter a database URL' },
+            {
+              pattern: /^(postgres|postgresql|mysql|sqlite):\/\/.+/, 
+              message: 'Invalid database URL format',
+            },
+          ]}
+        >
+          <Input
+            placeholder="e.g., postgres://user:password@localhost:5432/dbname"
+          />
+        </Form.Item>
 
-          <Form.Item>
-            <Button type="primary" htmlType="submit" loading={loading} block>
+        <Form.Item>
+          <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
+            <Button onClick={onCancel}>Cancel</Button>
+            <Button type="primary" htmlType="submit" loading={loading}>
               Add Database
             </Button>
-          </Form.Item>
-        </Form>
-      </Space>
-    </Card>
+          </Space>
+        </Form.Item>
+      </Form>
+    </Modal>
   );
 };
 

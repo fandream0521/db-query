@@ -40,11 +40,34 @@ pub async fn upsert_database(
     Path(name): Path<String>,
     Json(request): Json<CreateDatabaseRequest>,
 ) -> Result<Json<DatabaseConnection>, AppError> {
+    tracing::info!("[upsert_database] Starting database upsert - name: {}, url: {}", name, request.url);
+    
     // Test connection first
-    DatabaseService::test_connection(&request.url).await?;
+    tracing::info!("[upsert_database] Testing database connection...");
+    match DatabaseService::test_connection(&request.url).await {
+        Ok(_) => {
+            tracing::info!("[upsert_database] Connection test successful");
+        }
+        Err(e) => {
+            tracing::error!("[upsert_database] Connection test failed: {:?}", e);
+            return Err(e);
+        }
+    }
     
     // Store connection
-    let connection = service.store_connection(&name, &request)?;
+    tracing::info!("[upsert_database] Storing database connection...");
+    let connection = match service.store_connection(&name, &request) {
+        Ok(conn) => {
+            tracing::info!("[upsert_database] Database connection stored successfully - name: {}", name);
+            conn
+        }
+        Err(e) => {
+            tracing::error!("[upsert_database] Failed to store connection: {:?}", e);
+            return Err(e);
+        }
+    };
+    
+    tracing::info!("[upsert_database] Database upsert completed successfully - name: {}", name);
     Ok(Json(connection))
 }
 

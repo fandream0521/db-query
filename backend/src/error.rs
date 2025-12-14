@@ -58,6 +58,7 @@ impl IntoResponse for AppError {
 
 impl From<rusqlite::Error> for AppError {
     fn from(err: rusqlite::Error) -> Self {
+        tracing::error!("[AppError] SQLite error: {:?}", err);
         AppError::DatabaseError(err.to_string())
     }
 }
@@ -65,11 +66,14 @@ impl From<rusqlite::Error> for AppError {
 impl From<sqlx::Error> for AppError {
     fn from(err: sqlx::Error) -> Self {
         // Check if it's a connection error
-        if matches!(err, sqlx::Error::PoolClosed | sqlx::Error::Io(_)) {
+        let error = if matches!(err, sqlx::Error::PoolClosed | sqlx::Error::Io(_)) {
+            tracing::error!("[AppError] SQLx connection error: {:?}", err);
             AppError::ConnectionError(err.to_string())
         } else {
+            tracing::error!("[AppError] SQLx database error: {:?}", err);
             AppError::DatabaseError(err.to_string())
-        }
+        };
+        error
     }
 }
 

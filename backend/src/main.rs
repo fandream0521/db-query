@@ -25,8 +25,14 @@ use services::schema_service::SchemaService;
 
 #[tokio::main]
 async fn main() {
-    // Initialize logging
-    tracing_subscriber::fmt::init();
+    // Initialize logging with more detailed output
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::DEBUG)
+        .with_target(false)
+        .with_thread_ids(true)
+        .with_file(true)
+        .with_line_number(true)
+        .init();
 
     // Load configuration
     let config = Config::from_env().expect("Failed to load configuration");

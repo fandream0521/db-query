@@ -2,29 +2,232 @@
   text-align: center;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+/* SQL Editor dark theme */
+.sql-editor-container {
+  background: #1e1e1e;
+  border-radius: 4px;
+  overflow: hidden;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+.sql-editor-container .monaco-editor {
+  background: #1e1e1e !important;
 }
 
-.App-header {
-  background-color: #282c34;
+.sql-editor-container .monaco-editor .margin {
+  background: #1e1e1e !important;
+}
+
+/* Custom scrollbar for sidebar and all scrollable areas */
+.ant-layout-sider::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.ant-layout-sider::-webkit-scrollbar-track,
+*::-webkit-scrollbar-track {
+  background: #f5f5f5;
+  border-radius: 4px;
+}
+
+.ant-layout-sider::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-thumb {
+  background: #d9d9d9;
+  border-radius: 4px;
+  border: 2px solid #f5f5f5;
+  transition: background 0.2s ease;
+}
+
+.ant-layout-sider::-webkit-scrollbar-thumb:hover,
+*::-webkit-scrollbar-thumb:hover {
+  background: #bfbfbf;
+}
+
+.ant-layout-sider::-webkit-scrollbar-thumb:active,
+*::-webkit-scrollbar-thumb:active {
+  background: #8c8c8c;
+}
+
+/* Firefox scrollbar */
+.ant-layout-sider,
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #d9d9d9 #f5f5f5;
+}
+
+/* Database list item hover effect */
+.database-item {
+  transition: all 0.2s ease;
+}
+
+/* Statistics cards - more compact */
+.ant-statistic-title {
+  font-size: 11px;
+  color: #8c8c8c;
+  font-weight: 500;
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+
+.ant-statistic-content {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.ant-statistic-content-value {
+  font-size: 18px !important;
+}
+
+/* Card styling */
+.ant-card {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.ant-card-head {
+  border-bottom: 1px solid #f0f0f0;
+  padding: 16px 20px;
+}
+
+.ant-card-body {
   padding: 20px;
-  color: white;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+/* Badge styling */
+.ant-badge-count {
+  min-width: 18px;
+  height: 18px;
+  line-height: 18px;
+  font-size: 11px;
+  padding: 0 6px;
+  box-shadow: none;
 }
 
+/* Input styling */
+.ant-input {
+  border-radius: 6px;
+}
+
+/* Button styling */
+.ant-btn {
+  border-radius: 6px;
+}
+
+.ant-btn-primary {
+  box-shadow: 0 2px 4px rgba(24, 144, 255, 0.2);
+}
+
+/* Tree styling */
+.ant-tree {
+  font-size: 13px;
+  overflow: hidden !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.ant-tree-list {
+  overflow: hidden !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.ant-tree-list-holder {
+  overflow: hidden !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.ant-tree-list-holder-inner {
+  overflow: hidden !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.ant-tree-node-content-wrapper {
+  padding: 4px 6px !important;
+  border-radius: 4px;
+  transition: all 0.2s;
+  width: 100% !important;
+  overflow: hidden !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.ant-tree-node-content-wrapper:hover {
+  background: #f5f5f5 !important;
+}
+
+.ant-tree-node-selected .ant-tree-node-content-wrapper {
+  background: #e6f7ff !important;
+}
+
+.ant-tree-title {
+  width: 100% !important;
+  overflow: hidden !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.ant-tree-child-tree {
+  margin-left: 24px !important;
+  width: calc(100% - 24px) !important;
+  max-width: calc(100% - 24px) !important;
+  overflow: hidden !important;
+}
+
+.ant-tree-treenode {
+  padding: 2px 0 !important;
+  width: 100% !important;
+  overflow: hidden !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.ant-tree-switcher {
+  width: 14px !important;
+  height: 14px !important;
+  line-height: 14px !important;
+  flex-shrink: 0 !important;
+}
+
+.ant-tree-indent {
+  flex-shrink: 0 !important;
+}
+
+.ant-tree-indent-unit {
+  width: 24px !important;
+}
+
+/* Increase indent for better hierarchy visibility */
+.ant-tree-treenode[data-level="1"] .ant-tree-indent-unit {
+  width: 0px !important;
+}
+
+.ant-tree-treenode[data-level="2"] .ant-tree-indent-unit {
+  width: 24px !important;
+}
+
+.ant-tree-treenode[data-level="3"] .ant-tree-indent-unit {
+  width: 24px !important;
+}
+
+.ant-tree-treenode[data-level="4"] .ant-tree-indent-unit {
+  width: 24px !important;
+}
+
+/* Prevent horizontal scroll */
+.ant-layout-sider {
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+
+.ant-layout-sider > * {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Text ellipsis */
+.ant-typography {
+  word-break: break-word;
+}
