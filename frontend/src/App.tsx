@@ -3,6 +3,7 @@ import { Layout, Typography, Row, Col } from 'antd';
 import DatabaseList from './components/DatabaseList';
 import AddDatabaseForm from './components/AddDatabaseForm';
 import SchemaView from './components/SchemaView';
+import QueryPanel from './components/QueryPanel';
 import { DatabaseConnection } from './types/database';
 import 'antd/dist/reset.css';
 import './App.css';
@@ -43,11 +44,18 @@ function App() {
           </Col>
         </Row>
         {selectedDb && (
-          <Row style={{ marginTop: '24px' }}>
-            <Col span={24}>
-              <SchemaView dbName={selectedDb.name} />
-            </Col>
-          </Row>
+          <>
+            <Row style={{ marginTop: '24px' }}>
+              <Col span={24}>
+                <SchemaView dbName={selectedDb.name} />
+              </Col>
+            </Row>
+            <Row style={{ marginTop: '24px' }}>
+              <Col span={24}>
+                <QueryPanel dbName={selectedDb.name} />
+              </Col>
+            </Row>
+          </>
         )}
       </Content>
     </Layout>

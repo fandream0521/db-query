@@ -5,4 +5,5 @@ pub mod database;
 pub mod request;
 pub mod schema;
 pub mod query;
+pub mod natural_language;
 

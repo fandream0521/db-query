@@ -53,3 +53,4 @@ POST /api/v1/dbs/{name}/query/natural
 }
 ```
 
+仔细阅读当前文件夹下的代码，然后运行后端和前端，根据./fixtures/test.rest 用 curl 测试后端已实现的路由，确保所有的unit test 都通过

@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Tabs, Spin, message, Button } from 'antd';
+import { Card, Tabs, Spin, Button } from 'antd';
 import { ReloadOutlined } from '@ant-design/icons';
 import { SchemaMetadata } from '../types/schema';
 import { getSchemaMetadata } from '../api/schema';
 import TableList from './TableList';
 import ViewList from './ViewList';
+import { showError } from '../utils/error';
 
 const { TabPane } = Tabs;
 
@@ -26,8 +27,8 @@ const SchemaView: React.FC<SchemaViewProps> = ({ dbName }) => {
     try {
       const data = await getSchemaMetadata(dbName);
       setMetadata(data);
-    } catch (error: any) {
-      message.error(`Failed to load schema: ${error.response?.data?.error || error.message}`);
+    } catch (error: unknown) {
+      showError(error, 'Failed to load schema');
       setMetadata(null);
     } finally {
       setLoading(false);

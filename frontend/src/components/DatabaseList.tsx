@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { List, Card, Typography, Button, Space, message } from 'antd';
+import { List, Card, Typography, Button, Space } from 'antd';
 import { DatabaseConnection } from '../types/database';
 import { listDatabases, deleteDatabase } from '../api/database';
+import { showError, showSuccess } from '../utils/error';
 
 const { Title } = Typography;
 
@@ -19,8 +20,8 @@ const DatabaseList: React.FC<DatabaseListProps> = ({ onSelect, onRefresh }) => {
     try {
       const data = await listDatabases();
       setDatabases(data);
-    } catch (error: any) {
-      message.error(`Failed to load databases: ${error.message}`);
+    } catch (error: unknown) {
+      showError(error, 'Failed to load databases');
     } finally {
       setLoading(false);
     }
@@ -33,13 +34,13 @@ const DatabaseList: React.FC<DatabaseListProps> = ({ onSelect, onRefresh }) => {
   const handleDelete = async (name: string) => {
     try {
       await deleteDatabase(name);
-      message.success(`Database '${name}' deleted successfully`);
+      showSuccess(`Database '${name}' deleted successfully`);
       await loadDatabases();
       if (onRefresh) {
         onRefresh();
       }
-    } catch (error: any) {
-      message.error(`Failed to delete database: ${error.message}`);
+    } catch (error: unknown) {
+      showError(error, 'Failed to delete database');
     }
   };
 

@@ -182,25 +182,25 @@ Setup → Foundational → US1 → US2 → US3 → US4
 
 **Backend Tasks:**
 
-- [ ] T047 [US3] Create backend/src/models/query.rs with QueryRequest, QueryResponse structs (camelCase)
-- [ ] T048 [US3] Create backend/src/services/sql_validator.rs for SQL parsing and validation
-- [ ] T049 [US3] Implement SELECT-only validation in backend/src/services/sql_validator.rs using sqlparser-rs
-- [ ] T050 [US3] Implement automatic LIMIT addition in backend/src/services/sql_validator.rs
-- [ ] T051 [US3] Create backend/src/services/query_executor.rs for executing queries against PostgreSQL
-- [ ] T052 [US3] Implement query execution with connection pooling in backend/src/services/query_executor.rs
-- [ ] T053 [US3] Create backend/src/api/queries.rs with POST /api/v1/dbs/{name}/query endpoint handler
-- [ ] T054 [US3] Add error handling for invalid SQL and execution errors in backend/src/api/queries.rs
-- [ ] T055 [US3] Register query routes in backend/src/main.rs
+- [x] T047 [US3] Create backend/src/models/query.rs with QueryRequest, QueryResponse structs (camelCase)
+- [x] T048 [US3] Create backend/src/services/sql_validator.rs for SQL parsing and validation
+- [x] T049 [US3] Implement SELECT-only validation in backend/src/services/sql_validator.rs using sqlparser-rs
+- [x] T050 [US3] Implement automatic LIMIT addition in backend/src/services/sql_validator.rs
+- [x] T051 [US3] Create backend/src/services/query_executor.rs for executing queries against PostgreSQL
+- [x] T052 [US3] Implement query execution with connection pooling in backend/src/services/query_executor.rs
+- [x] T053 [US3] Create backend/src/api/queries.rs with POST /api/v1/dbs/{name}/query endpoint handler
+- [x] T054 [US3] Add error handling for invalid SQL and execution errors in backend/src/api/queries.rs
+- [x] T055 [US3] Register query routes in backend/src/main.rs
 
 **Frontend Tasks:**
 
-- [ ] T056 [P] [US3] Create frontend/src/types/query.ts with QueryRequest, QueryResponse interfaces
-- [ ] T057 [P] [US3] Create frontend/src/api/query.ts with executeQuery API function
-- [ ] T058 [US3] Create frontend/src/components/SQLEditor.tsx using Monaco Editor
-- [ ] T059 [US3] Create frontend/src/components/QueryPanel.tsx with editor and execute button
-- [ ] T060 [US3] Create frontend/src/components/QueryResults.tsx for displaying results (basic structure)
-- [ ] T061 [US3] Integrate QueryPanel in frontend/src/App.tsx with database and schema context
-- [ ] T062 [US3] Add error display for SQL validation errors in frontend/src/components/QueryPanel.tsx
+- [x] T056 [P] [US3] Create frontend/src/types/query.ts with QueryRequest, QueryResponse interfaces
+- [x] T057 [P] [US3] Create frontend/src/api/query.ts with executeQuery API function
+- [x] T058 [US3] Create frontend/src/components/SQLEditor.tsx using Monaco Editor
+- [x] T059 [US3] Create frontend/src/components/QueryPanel.tsx with editor and execute button
+- [x] T060 [US3] Create frontend/src/components/QueryResults.tsx for displaying results (basic structure)
+- [x] T061 [US3] Integrate QueryPanel in frontend/src/App.tsx with database and schema context
+- [x] T062 [US3] Add error display for SQL validation errors in frontend/src/components/QueryPanel.tsx
 
 ---
 
@@ -216,18 +216,18 @@ Setup → Foundational → US1 → US2 → US3 → US4
 
 **Backend Tasks:**
 
-- [ ] T063 [US4] Create backend/src/models/natural_language.rs with NaturalLanguageQueryRequest struct
-- [ ] T064 [US4] Create backend/src/services/llm_service.rs for LLM API integration
-- [ ] T065 [US4] Implement natural language to SQL conversion in backend/src/services/llm_service.rs (format schema as context, call LLM API)
-- [ ] T066 [US4] Create backend/src/api/queries.rs with POST /api/v1/dbs/{name}/query/natural endpoint handler
-- [ ] T067 [US4] Add error handling for LLM API failures in backend/src/api/queries.rs
+- [x] T063 [US4] Create backend/src/models/natural_language.rs with NaturalLanguageQueryRequest struct
+- [x] T064 [US4] Create backend/src/services/llm_service.rs for LLM API integration
+- [x] T065 [US4] Implement natural language to SQL conversion in backend/src/services/llm_service.rs (format schema as context, call LLM API)
+- [x] T066 [US4] Create backend/src/api/queries.rs with POST /api/v1/dbs/{name}/query/natural endpoint handler
+- [x] T067 [US4] Add error handling for LLM API failures in backend/src/api/queries.rs
 
 **Frontend Tasks:**
 
-- [ ] T068 [P] [US4] Create frontend/src/types/natural_language.ts with NaturalLanguageQueryRequest interface
-- [ ] T069 [P] [US4] Create frontend/src/api/natural_language.ts with executeNaturalLanguageQuery API function
-- [ ] T070 [US4] Create frontend/src/components/NaturalLanguageQuery.tsx with input field and generate button
-- [ ] T071 [US4] Integrate NaturalLanguageQuery in frontend/src/components/QueryPanel.tsx
+- [x] T068 [P] [US4] Create frontend/src/types/natural_language.ts with NaturalLanguageQueryRequest interface
+- [x] T069 [P] [US4] Create frontend/src/api/natural_language.ts with executeNaturalLanguageQuery API function
+- [x] T070 [US4] Create frontend/src/components/NaturalLanguageQuery.tsx with input field and generate button
+- [x] T071 [US4] Integrate NaturalLanguageQuery in frontend/src/components/QueryPanel.tsx
 
 ---
 
@@ -243,12 +243,12 @@ Setup → Foundational → US1 → US2 → US3 → US4
 
 **Frontend Tasks:**
 
-- [ ] T072 [US5] Enhance frontend/src/components/QueryResults.tsx with Ant Design Table component
-- [ ] T073 [US5] Implement column header display in frontend/src/components/QueryResults.tsx
-- [ ] T074 [US5] Implement pagination for large result sets in frontend/src/components/QueryResults.tsx
-- [ ] T075 [US5] Add empty state display in frontend/src/components/QueryResults.tsx
-- [ ] T076 [US5] Add responsive styling to frontend/src/components/QueryResults.tsx using Tailwind CSS
-- [ ] T077 [US5] Display execution time in frontend/src/components/QueryResults.tsx
+- [x] T072 [US5] Enhance frontend/src/components/QueryResults.tsx with Ant Design Table component
+- [x] T073 [US5] Implement column header display in frontend/src/components/QueryResults.tsx
+- [x] T074 [US5] Implement pagination for large result sets in frontend/src/components/QueryResults.tsx
+- [x] T075 [US5] Add empty state display in frontend/src/components/QueryResults.tsx
+- [x] T076 [US5] Add responsive styling to frontend/src/components/QueryResults.tsx using Tailwind CSS
+- [x] T077 [US5] Display execution time in frontend/src/components/QueryResults.tsx
 
 ---
 
@@ -258,22 +258,22 @@ Setup → Foundational → US1 → US2 → US3 → US4
 
 ### Error Handling
 
-- [ ] T078 [P] Create consistent error response format in backend/src/error.rs (ErrorResponse struct)
-- [ ] T079 [P] Implement error handling middleware in backend/src/api/middleware.rs
-- [ ] T080 [P] Create frontend/src/utils/error.ts for error handling utilities
-- [ ] T081 [P] Add error toast notifications in frontend using Ant Design message component
+- [x] T078 [P] Create consistent error response format in backend/src/error.rs (ErrorResponse struct)
+- [x] T079 [P] Implement error handling middleware in backend/src/api/middleware.rs (error handling already in place via IntoResponse)
+- [x] T080 [P] Create frontend/src/utils/error.ts for error handling utilities
+- [x] T081 [P] Add error toast notifications in frontend using Ant Design message component
 
 ### UI/UX Improvements
 
-- [ ] T082 [P] Add loading states for all async operations in frontend components
-- [ ] T083 [P] Improve form validation and user feedback in frontend forms
-- [ ] T084 [P] Add keyboard shortcuts for common actions (e.g., Ctrl+Enter to execute query)
+- [x] T082 [P] Add loading states for all async operations in frontend components
+- [x] T083 [P] Improve form validation and user feedback in frontend forms
+- [x] T084 [P] Add keyboard shortcuts for common actions (e.g., Ctrl+Enter to execute query)
 
 ### Documentation
 
-- [ ] T085 [P] Create README.md with setup and usage instructions
-- [ ] T086 [P] Add code comments and documentation for complex functions
-- [ ] T087 [P] Update API documentation in contracts/openapi.yaml if needed
+- [x] T085 [P] Create README.md with setup and usage instructions
+- [x] T086 [P] Add code comments and documentation for complex functions
+- [x] T087 [P] Update API documentation in contracts/openapi.yaml if needed (API matches existing contracts)
 
 ### Testing
 

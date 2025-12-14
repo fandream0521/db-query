@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Form, Input, Button, Card, Typography, message, Space } from 'antd';
+import { Form, Input, Button, Card, Typography, Space } from 'antd';
 import { CreateDatabaseRequest } from '../types/database';
 import { upsertDatabase } from '../api/database';
+import { showError, showSuccess } from '../utils/error';
 
 const { Title } = Typography;
 
@@ -18,13 +19,13 @@ const AddDatabaseForm: React.FC<AddDatabaseFormProps> = ({ onSuccess }) => {
     try {
       const request: CreateDatabaseRequest = { url: values.url };
       await upsertDatabase(values.name, request);
-      message.success(`Database '${values.name}' added successfully`);
+      showSuccess(`Database '${values.name}' added successfully`);
       form.resetFields();
       if (onSuccess) {
         onSuccess();
       }
-    } catch (error: any) {
-      message.error(`Failed to add database: ${error.response?.data?.error || error.message}`);
+    } catch (error: unknown) {
+      showError(error, 'Failed to add database');
     } finally {
       setLoading(false);
     }
