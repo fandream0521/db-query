@@ -5,16 +5,19 @@ use axum::{
 use crate::error::AppError;
 use crate::models::query::{QueryRequest, QueryResponse};
 use crate::models::natural_language::NaturalLanguageQueryRequest;
-use crate::api::databases::{SharedDatabaseService, SharedSchemaService};
+use crate::types::{SharedDatabaseService, SharedSchemaService, SharedLLMService, SharedConnectionPoolCache};
 use crate::services::query_executor::QueryExecutor;
 use crate::services::sql_validator::validate_sql;
-use crate::services::llm_service::LLMService;
-use sqlx::PgPool;
 
 /// POST /api/v1/dbs/{name}/query
 /// Execute a SQL query against the specified database
 pub async fn execute_query(
-    State((service, _)): State<(SharedDatabaseService, SharedSchemaService)>,
+    State((db_service, _, _, pool_cache)): State<(
+        SharedDatabaseService,
+        SharedSchemaService,
+        SharedLLMService,
+        SharedConnectionPoolCache,
+    )>,
     Path(name): Path<String>,
     Json(request): Json<QueryRequest>,
 ) -> Result<Json<QueryResponse>, AppError> {
@@ -26,13 +29,13 @@ pub async fn execute_query(
     }
 
     // Get database connection
-    let connection = service.get_connection(&name)?;
+    let connection = db_service.get_connection(&name)?;
 
     // Validate SQL syntax and ensure it's SELECT only
     let validated_sql = validate_sql(&request.sql)?;
 
-    // Create PostgreSQL connection pool
-    let pool = PgPool::connect(&connection.url).await?;
+    // Get or create connection pool
+    let pool = pool_cache.get_or_create(&name, &connection.url).await?;
 
     // Execute query
     let response = QueryExecutor::execute_query(&pool, &validated_sql).await?;
@@ -43,7 +46,12 @@ pub async fn execute_query(
 /// POST /api/v1/dbs/{name}/query/natural
 /// Execute a natural language query (generates SQL and executes it)
 pub async fn execute_natural_language_query(
-    State((db_service, schema_service)): State<(SharedDatabaseService, SharedSchemaService)>,
+    State((db_service, schema_service, llm_service, pool_cache)): State<(
+        SharedDatabaseService,
+        SharedSchemaService,
+        SharedLLMService,
+        SharedConnectionPoolCache,
+    )>,
     Path(name): Path<String>,
     Json(request): Json<NaturalLanguageQueryRequest>,
 ) -> Result<Json<QueryResponse>, AppError> {
@@ -60,14 +68,7 @@ pub async fn execute_natural_language_query(
     // Get schema metadata for context
     let schema = schema_service.get_schema_metadata(&name).await?;
 
-    // Initialize LLM service (get config from environment)
-    let llm_api_key = std::env::var("LLM_API_KEY")
-        .unwrap_or_else(|_| "".to_string());
-    let llm_api_url = std::env::var("LLM_API_URL")
-        .unwrap_or_else(|_| "https://api.openai.com/v1/chat/completions".to_string());
-    let llm_service = LLMService::new(llm_api_key, llm_api_url);
-
-    // Convert natural language to SQL
+    // Convert natural language to SQL using LLM service from state
     let sql = llm_service
         .natural_language_to_sql(&request.prompt, &schema)
         .await?;
@@ -75,8 +76,8 @@ pub async fn execute_natural_language_query(
     // Validate the generated SQL
     let validated_sql = validate_sql(&sql)?;
 
-    // Create PostgreSQL connection pool
-    let pool = PgPool::connect(&connection.url).await?;
+    // Get or create connection pool
+    let pool = pool_cache.get_or_create(&name, &connection.url).await?;
 
     // Execute query
     let response = QueryExecutor::execute_query(&pool, &validated_sql).await?;

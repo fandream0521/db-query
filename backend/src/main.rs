@@ -16,12 +16,14 @@ mod services;
 mod utils;
 mod types;
 
-use api::databases::{SharedDatabaseService, SharedSchemaService, list_databases, get_database_metadata, upsert_database, delete_database};
+use api::databases::{list_databases, get_database_metadata, upsert_database, delete_database};
 use api::queries::{execute_query, execute_natural_language_query};
 use db::init_db;
 use config::Config;
 use services::database_service::DatabaseService;
 use services::schema_service::SchemaService;
+use services::llm_service::LLMService;
+use types::{SharedDatabaseService, SharedSchemaService, SharedLLMService, ConnectionPoolCache, SharedConnectionPoolCache};
 
 #[tokio::main]
 async fn main() {
@@ -36,19 +38,28 @@ async fn main() {
 
     // Load configuration
     let config = Config::from_env().expect("Failed to load configuration");
-    
+
     // Initialize SQLite database
     let sqlite_conn = init_db(&config.sqlite_db_path)
         .expect("Failed to initialize SQLite database");
-    
+
     // Wrap SQLite connection in Arc<Mutex<>> for sharing between services
     let sqlite_conn = Arc::new(std::sync::Mutex::new(sqlite_conn));
-    
+
     // Create database service
     let db_service: SharedDatabaseService = Arc::new(DatabaseService::new(sqlite_conn.clone()));
-    
+
     // Create schema service
     let schema_service: SharedSchemaService = Arc::new(SchemaService::new(sqlite_conn, db_service.clone()));
+
+    // Create LLM service
+    let llm_service: SharedLLMService = Arc::new(LLMService::new(
+        config.llm_api_key.clone(),
+        config.llm_api_url.clone(),
+    ));
+
+    // Create connection pool cache
+    let pool_cache: SharedConnectionPoolCache = Arc::new(ConnectionPoolCache::new());
 
     // Configure CORS to allow all origins
     let cors = CorsLayer::new()
@@ -65,14 +76,14 @@ async fn main() {
         .route("/api/v1/dbs/{name}", delete(delete_database))
         .route("/api/v1/dbs/{name}/query", post(execute_query))
         .route("/api/v1/dbs/{name}/query/natural", post(execute_natural_language_query))
-        .with_state((db_service, schema_service))
+        .with_state((db_service, schema_service, llm_service, pool_cache))
         .layer(cors);
 
     // Start server
     let addr = format!("0.0.0.0:{}", config.port);
     let listener = TcpListener::bind(&addr).await.unwrap();
     tracing::info!("Server listening on {}", listener.local_addr().unwrap());
-    
+
     axum::serve(listener, app).await.unwrap();
 }
 

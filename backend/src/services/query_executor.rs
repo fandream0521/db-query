@@ -6,18 +6,19 @@ use std::time::Instant;
 pub struct QueryExecutor;
 
 impl QueryExecutor {
-    /// Execute a SQL query against PostgreSQL database
+    /// Execute a SQL query against `PostgreSQL` database
     pub async fn execute_query(
         pool: &PgPool,
         sql: &str,
     ) -> Result<QueryResponse, AppError> {
         let start_time = Instant::now();
-        
+
         // Execute query
         let rows = sqlx::query(sql)
             .fetch_all(pool)
             .await?;
-        
+
+        #[allow(clippy::cast_possible_truncation)]
         let execution_time = start_time.elapsed().as_millis() as u64;
         
         // Get column names - try from first row, or use metadata query if empty
@@ -60,23 +61,21 @@ impl QueryExecutor {
         sql: &str,
     ) -> Result<Vec<String>, AppError> {
         // Execute with LIMIT 0 to get metadata without data
-        let metadata_sql = if !sql.to_uppercase().contains("LIMIT") {
-            format!("{} LIMIT 0", sql)
-        } else {
+        let metadata_sql = if sql.to_uppercase().contains("LIMIT") {
             // Wrap in subquery to add LIMIT 0
-            format!("SELECT * FROM ({}) AS _ LIMIT 0", sql)
+            format!("SELECT * FROM ({sql}) AS _ LIMIT 0")
+        } else {
+            format!("{sql} LIMIT 0")
         };
-        
+
         let metadata_rows = sqlx::query(&metadata_sql)
             .fetch_all(pool)
             .await;
-        
-        if let Ok(rows) = metadata_rows {
-            if let Some(row) = rows.first() {
-                return Ok(row.columns().iter().map(|c| c.name().to_string()).collect());
-            }
+
+        if let Ok(rows) = metadata_rows && let Some(row) = rows.first() {
+            return Ok(row.columns().iter().map(|c| c.name().to_string()).collect());
         }
-        
+
         // Fallback: return empty
         Ok(Vec::new())
     }

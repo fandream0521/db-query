@@ -56,7 +56,7 @@ impl LLMService {
         let schema_context = Self::format_schema_context(schema);
 
         // Create prompt for LLM
-        let system_prompt = r#"You are a SQL expert. Convert natural language queries to PostgreSQL SELECT statements.
+        let system_prompt = r"You are a SQL expert. Convert natural language queries to PostgreSQL SELECT statements.
 
 Rules:
 1. Only generate SELECT statements (read-only queries)
@@ -67,7 +67,7 @@ Rules:
 6. Do not include LIMIT clauses (the system will add them automatically)
 
 Schema Information:
-"#;
+";
 
         let user_prompt = format!("{}\n\nUser Query: {}", schema_context, prompt);
 

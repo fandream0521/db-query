@@ -5,7 +5,7 @@ pub fn init_db(db_path: &str) -> SqliteResult<Connection> {
     // Create parent directory if it doesn't exist
     if let Some(parent) = Path::new(db_path).parent() {
         std::fs::create_dir_all(parent)
-            .map_err(|e| rusqlite::Error::InvalidPath(format!("Failed to create directory: {}", e).into()))?;
+            .map_err(|e| rusqlite::Error::InvalidPath(format!("Failed to create directory: {e}").into()))?;
     }
 
     let conn = Connection::open(db_path)?;

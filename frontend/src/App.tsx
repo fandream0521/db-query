@@ -1,53 +1,34 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Layout, Typography, Button, Card, Spin, Badge, Tree, Tooltip } from 'antd';
-import { PlusOutlined, ReloadOutlined, PlayCircleOutlined, DatabaseOutlined } from '@ant-design/icons';
+import React, { useState, useEffect } from 'react';
+import { Layout } from 'antd';
 import AddDatabaseForm from './components/AddDatabaseForm';
-import SQLEditor from './components/SQLEditor';
-import QueryResults from './components/QueryResults';
+import DatabaseSidebar from './components/DatabaseSidebar';
+import SchemaSidebar from './components/SchemaSidebar';
+import QueryWorkspace from './components/QueryWorkspace';
 import { DatabaseConnection } from './types/database';
-import { SchemaMetadata } from './types/schema';
-import { listDatabases } from './api/database';
-import { getSchemaMetadata } from './api/schema';
-import { executeQuery } from './api/query';
-import { QueryResponse } from './types/query';
-import { showError, showSuccess } from './utils/error';
-import 'antd/dist/reset.css';
-import './App.css';
+import { useDatabaseManagement } from './hooks/useDatabaseManagement';
+import { useSchemaLoading } from './hooks/useSchemaLoading';
+import { useQueryExecution } from './hooks/useQueryExecution';
 
-const { Sider, Content } = Layout;
-const { Title, Text } = Typography;
 
 function App() {
-  const [selectedDb, setSelectedDb] = useState<DatabaseConnection | null>(null);
-  const [databases, setDatabases] = useState<DatabaseConnection[]>([]);
-  const [schema, setSchema] = useState<SchemaMetadata | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [schemaLoading, setSchemaLoading] = useState(false);
+  // Custom hooks for state management
+  const { databases, selectedDb, loading, loadDatabases, selectDatabase } = useDatabaseManagement();
+  const { schema, loading: schemaLoading, expandedKeys, loadSchema, setExpandedKeys } = useSchemaLoading();
+  const {
+    sql,
+    setSql,
+    queryResult,
+    queryLoading,
+    executionTime,
+    executeQuery: executeQueryHandler,
+    resetQuery,
+  } = useQueryExecution(selectedDb?.name || null);
+
+  // Local UI state
   const [showAddForm, setShowAddForm] = useState(false);
-  const [sql, setSql] = useState<string>('SELECT * FROM');
-  const [queryResult, setQueryResult] = useState<QueryResponse | null>(null);
-  const [queryLoading, setQueryLoading] = useState(false);
-  const [executionTime, setExecutionTime] = useState<string>('-');
-  const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([]);
   const [firstColumnCollapsed, setFirstColumnCollapsed] = useState(false);
 
-  const loadDatabases = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await listDatabases();
-      setDatabases(data);
-      // Auto-select first database if none selected
-      if (!selectedDb && data.length > 0) {
-        setSelectedDb(data[0]);
-      }
-    } catch (error: unknown) {
-      showError(error, 'Failed to load databases');
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedDb]);
-
-  // Load databases
+  // Load databases on mount
   useEffect(() => {
     loadDatabases();
   }, [loadDatabases]);
@@ -56,33 +37,12 @@ function App() {
   useEffect(() => {
     if (selectedDb) {
       loadSchema(selectedDb.name);
-    } else {
-      setSchema(null);
     }
-  }, [selectedDb]);
-
-  const loadSchema = async (dbName: string) => {
-    setSchemaLoading(true);
-    try {
-      const data = await getSchemaMetadata(dbName);
-      setSchema(data);
-      // Auto-expand all tables
-      if (data.tables.length > 0) {
-        setExpandedKeys(data.tables.map((table) => `table-${table.name}`));
-      }
-    } catch (error: unknown) {
-      showError(error, 'Failed to load schema');
-      setSchema(null);
-    } finally {
-      setSchemaLoading(false);
-    }
-  };
+  }, [selectedDb, loadSchema]);
 
   const handleDatabaseSelect = (db: DatabaseConnection) => {
-    setSelectedDb(db);
-    setSql('SELECT * FROM');
-    setQueryResult(null);
-    setExecutionTime('-');
+    selectDatabase(db);
+    resetQuery();
   };
 
   const handleRefresh = () => {
@@ -92,623 +52,42 @@ function App() {
     loadDatabases();
   };
 
-  const handleExecute = async () => {
-    if (!sql.trim() || !selectedDb) {
-      return;
-    }
-
-    setQueryLoading(true);
-    setQueryResult(null);
-    const startTime = Date.now();
-
-    try {
-      const response = await executeQuery(selectedDb.name, { sql });
-      const endTime = Date.now();
-      setExecutionTime(`${((endTime - startTime) / 1000).toFixed(2)}s`);
-      setQueryResult(response);
-      showSuccess('Query executed successfully');
-    } catch (err: unknown) {
-      showError(err, 'Failed to execute query');
-    } finally {
-      setQueryLoading(false);
-    }
-  };
-
-  // Build tree data for tables
-  const buildTreeData = () => {
-    if (!schema) return [];
-
-    return [
-      {
-        title: (
-          <span style={{ fontWeight: 600, fontSize: '13px' }}>
-            Tables ({schema.tables.length})
-          </span>
-        ),
-        key: 'tables-root',
-        children: schema.tables.map((table) => ({
-          title: (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '100%', paddingRight: '8px' }}>
-              <Text 
-                strong 
-                ellipsis
-                style={{ 
-                  fontSize: '12px',
-                  flex: 1,
-                  minWidth: 0
-                }}
-              >
-                {table.name}
-              </Text>
-              <span style={{ fontSize: '10px', color: '#8c8c8c', flexShrink: 0 }}>
-                ({table.rowCount || 0} rows)
-              </span>
-            </div>
-          ),
-          key: `table-${table.name}`,
-          children: table.columns.map((col) => {
-            // Build constraints as children
-            const constraints = [];
-            if (table.primaryKey?.includes(col.name)) {
-              constraints.push({
-                title: (
-                  <span style={{ fontSize: '11px', color: '#1890ff' }}>
-                    PK (Primary Key)
-                  </span>
-                ),
-                key: `constraint-pk-${table.name}-${col.name}`,
-                isLeaf: true,
-              });
-            }
-            if (!col.nullable) {
-              constraints.push({
-                title: (
-                  <span style={{ fontSize: '11px', color: '#ff4d4f' }}>
-                    NOT NULL
-                  </span>
-                ),
-                key: `constraint-null-${table.name}-${col.name}`,
-                isLeaf: true,
-              });
-            }
-            constraints.push({
-              title: (
-                <span style={{ fontSize: '11px', color: '#8c8c8c' }}>
-                  Type: {col.dataType.toUpperCase()}
-                </span>
-              ),
-              key: `constraint-type-${table.name}-${col.name}`,
-              isLeaf: true,
-            });
-            if (col.defaultValue) {
-              constraints.push({
-                title: (
-                  <span style={{ fontSize: '11px', color: '#8c8c8c' }}>
-                    Default: {col.defaultValue}
-                  </span>
-                ),
-                key: `constraint-default-${table.name}-${col.name}`,
-                isLeaf: true,
-              });
-            }
-
-            return {
-              title: (
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  width: '100%',
-                  paddingRight: '8px',
-                  boxSizing: 'border-box'
-                }}>
-                  <Text 
-                    code 
-                    ellipsis
-                    style={{ 
-                      fontSize: '12px',
-                      background: 'transparent',
-                      padding: 0,
-                      border: 'none',
-                      flex: 1,
-                      minWidth: 0
-                    }}
-                  >
-                    {col.name}
-                  </Text>
-                </div>
-              ),
-              key: `field-${table.name}-${col.name}`,
-              children: constraints.length > 0 ? constraints : undefined,
-              isLeaf: constraints.length === 0,
-            };
-          }),
-        })),
-      },
-    ];
-  };
-
   return (
     <Layout style={{ minHeight: '100vh', background: '#f5f5f5' }}>
       {/* First Column - Database List */}
-      <Sider
-        width={firstColumnCollapsed ? 64 : 224}
-        style={{
-          background: '#fff',
-          borderRight: '1px solid #e8e8e8',
-          overflow: 'hidden',
-          height: '100vh',
-          position: 'fixed',
-          left: 0,
-          top: 0,
-          transition: 'width 0.3s ease',
-          zIndex: 2,
-        }}
-      >
-        {/* Header */}
-        <div style={{ 
-          padding: firstColumnCollapsed ? '20px 12px' : '20px', 
-          borderBottom: '1px solid #f0f0f0', 
-          position: 'relative',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: firstColumnCollapsed ? 'center' : 'stretch',
-          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-        }}>
-          <div 
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '12px', 
-              marginBottom: '16px',
-              cursor: 'pointer',
-              userSelect: 'none',
-              justifyContent: firstColumnCollapsed ? 'center' : 'flex-start',
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-            }}
-            onClick={() => setFirstColumnCollapsed(!firstColumnCollapsed)}
-          >
-            {!firstColumnCollapsed && (
-              <Title 
-                level={4} 
-                style={{ 
-                  margin: 0, 
-                  fontSize: '18px', 
-                  fontWeight: 600, 
-                  whiteSpace: 'nowrap', 
-                  overflow: 'hidden',
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                }}
-              >
-                DB QUERY TOOL
-              </Title>
-            )}
-            <DatabaseOutlined 
-              style={{ 
-                fontSize: '24px', 
-                color: '#1890ff', 
-                flexShrink: 0,
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                transform: firstColumnCollapsed ? 'scale(0.9)' : 'scale(1)'
-              }} 
-            />
-          </div>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            block={!firstColumnCollapsed}
-            onClick={() => setShowAddForm(true)}
-            style={{ 
-              height: '40px',
-              fontSize: '14px',
-              borderRadius: '6px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: firstColumnCollapsed ? '0' : '4px 15px',
-              width: firstColumnCollapsed ? '40px' : '100%',
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              overflow: 'hidden',
-              whiteSpace: 'nowrap'
-            }}
-            title={firstColumnCollapsed ? 'Add Database' : undefined}
-          >
-            {!firstColumnCollapsed && (
-              <span style={{
-                transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                display: 'inline-block'
-              }}>
-                ADD DATABASE
-              </span>
-            )}
-          </Button>
-        </div>
-
-        {/* Database List Body */}
-        <div style={{ 
-          padding: firstColumnCollapsed ? '16px 12px' : '16px', 
-          overflow: 'auto', 
-          height: 'calc(100vh - 120px)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: firstColumnCollapsed ? 'center' : 'stretch',
-          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-        }}>
-          {loading ? (
-            <Spin size="large" style={{ display: 'block', textAlign: 'center', padding: '40px' }} />
-          ) : databases.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
-              {!firstColumnCollapsed && <Text type="secondary">No databases added</Text>}
-            </div>
-          ) : (
-            <div>
-              {databases.map((db) => {
-                const isSelected = selectedDb?.name === db.name;
-                return (
-                  <Tooltip 
-                    key={db.name}
-                    title={firstColumnCollapsed ? db.name : undefined}
-                    placement="right"
-                  >
-                    <div
-                      onClick={() => handleDatabaseSelect(db)}
-                      className="database-item"
-                      style={{
-                        padding: firstColumnCollapsed ? '12px' : '14px 16px',
-                        marginBottom: '8px',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        background: isSelected ? '#f0f7ff' : 'transparent',
-                        border: isSelected ? '1px solid #1890ff' : '1px solid #f0f0f0',
-                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: firstColumnCollapsed ? 'center' : 'space-between',
-                        width: firstColumnCollapsed ? '40px' : '100%',
-                        boxSizing: 'border-box',
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isSelected) {
-                          e.currentTarget.style.background = '#fafafa';
-                          e.currentTarget.style.borderColor = '#d9d9d9';
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isSelected) {
-                          e.currentTarget.style.background = 'transparent';
-                          e.currentTarget.style.borderColor = '#f0f0f0';
-                        }
-                      }}
-                    >
-                      {firstColumnCollapsed ? (
-                        <div style={{ 
-                          display: 'flex', 
-                          flexDirection: 'column', 
-                          alignItems: 'center', 
-                          gap: '4px',
-                          width: '100%',
-                          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                        }}>
-                          {isSelected && (
-                            <div
-                              style={{
-                                width: '6px',
-                                height: '6px',
-                                borderRadius: '50%',
-                                background: '#52c41a',
-                                transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                              }}
-                            />
-                          )}
-                          <DatabaseOutlined 
-                            style={{ 
-                              fontSize: '20px', 
-                              color: isSelected ? '#1890ff' : '#262626',
-                              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                            }} 
-                          />
-                        </div>
-                      ) : (
-                        <>
-                          <div style={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: '8px', 
-                            flex: 1, 
-                            minWidth: 0,
-                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                          }}>
-                            {isSelected && (
-                              <div
-                                style={{
-                                  width: '6px',
-                                  height: '6px',
-                                  borderRadius: '50%',
-                                  background: '#52c41a',
-                                  flexShrink: 0,
-                                  transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                }}
-                              />
-                            )}
-                            <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-                              <Text 
-                                strong={isSelected} 
-                                ellipsis
-                                style={{ 
-                                  fontSize: '13px',
-                                  color: isSelected ? '#1890ff' : '#262626',
-                                  display: 'block',
-                                  marginBottom: '4px',
-                                  width: '100%'
-                                }}
-                              >
-                                {db.name}
-                              </Text>
-                              <Tooltip title={db.url} placement="right">
-                                <Text 
-                                  type="secondary" 
-                                  ellipsis
-                                  style={{ 
-                                    fontSize: '11px', 
-                                    display: 'block',
-                                    width: '100%',
-                                    cursor: 'help'
-                                  }}
-                                >
-                                  {db.url.replace(/\/\/.*@/, '//***@')}
-                                </Text>
-                              </Tooltip>
-                            </div>
-                          </div>
-                          <Badge 
-                            count={0} 
-                            showZero 
-                            style={{ 
-                              backgroundColor: '#d9d9d9', 
-                              flexShrink: 0,
-                              transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                            }} 
-                          />
-                        </>
-                      )}
-                    </div>
-                  </Tooltip>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </Sider>
+      <DatabaseSidebar
+        databases={databases}
+        selectedDb={selectedDb}
+        loading={loading}
+        collapsed={firstColumnCollapsed}
+        onAddDatabase={() => setShowAddForm(true)}
+        onSelectDatabase={handleDatabaseSelect}
+        onToggleCollapse={() => setFirstColumnCollapsed(!firstColumnCollapsed)}
+      />
 
       {/* Second Column - Tables Tree */}
-      <Sider
-        width={256}
-        style={{
-          background: '#fff',
-          borderRight: '1px solid #e8e8e8',
-          overflow: 'auto',
-          height: '100vh',
-          position: 'fixed',
-          left: firstColumnCollapsed ? 64 : 224,
-          top: 0,
-          zIndex: 1,
-          transition: 'left 0.3s ease',
-        }}
-      >
-        {selectedDb ? (
-          <>
-            {/* Header - Yellow background */}
-            <div
-              style={{
-                padding: '16px 20px',
-                background: '#fff3cd',
-                borderBottom: '1px solid #ffc107',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <Text strong style={{ color: '#856404', fontSize: '14px' }}>
-                {selectedDb.name.toUpperCase()}
-              </Text>
-              <Button
-                icon={<ReloadOutlined />}
-                onClick={handleRefresh}
-                size="small"
-                style={{ 
-                  borderRadius: '4px',
-                }}
-              >
-                REFRESH
-              </Button>
-            </div>
-
-            {/* Body - Tables Tree */}
-            <div style={{ padding: '12px 16px', overflowX: 'hidden', width: '100%', boxSizing: 'border-box' }}>
-              {schemaLoading ? (
-                <Spin size="large" style={{ display: 'block', textAlign: 'center', padding: '40px' }} />
-              ) : schema ? (
-                <div style={{ width: '100%', overflow: 'hidden' }}>
-                  <Tree
-                    treeData={buildTreeData()}
-                    defaultExpandAll={false}
-                    expandedKeys={expandedKeys}
-                    onExpand={(keys) => setExpandedKeys(keys)}
-                    showLine={{ showLeafIcon: false }}
-                    style={{ 
-                      background: 'transparent',
-                      fontSize: '13px',
-                      width: '100%'
-                    }}
-                    blockNode
-                  />
-                </div>
-              ) : (
-                <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
-                  <Text type="secondary">No schema available</Text>
-                </div>
-              )}
-            </div>
-          </>
-        ) : (
-          <div style={{ padding: '40px', textAlign: 'center', color: '#999' }}>
-            <Text type="secondary">Please select a database</Text>
-          </div>
-        )}
-      </Sider>
+      <SchemaSidebar
+        selectedDb={selectedDb}
+        schema={schema}
+        loading={schemaLoading}
+        expandedKeys={expandedKeys}
+        firstColumnCollapsed={firstColumnCollapsed}
+        onRefresh={handleRefresh}
+        onExpandedKeysChange={setExpandedKeys}
+      />
 
       {/* Third Column - Statistics and Query Panel */}
       <Layout style={{ marginLeft: firstColumnCollapsed ? 320 : 480, background: '#f5f5f5', transition: 'margin-left 0.3s ease' }}>
-        <Content style={{ padding: '12px 24px 12px 24px', background: '#f5f5f5', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-          {selectedDb ? (
-            <>
-              {/* Statistics Cards */}
-              <div style={{ display: 'flex', gap: '12px', marginBottom: '10px', width: '100%', flexShrink: 0 }}>
-                <Card 
-                  style={{ 
-                    textAlign: 'center', 
-                    flex: 1,
-                    borderRadius: '6px',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-                  }}
-                  bodyStyle={{ padding: '10px 12px' }}
-                >
-                  <div style={{ marginBottom: '2px' }}>
-                    <Text style={{ fontSize: '11px', color: '#8c8c8c', fontWeight: 500 }}>TABLES</Text>
-                  </div>
-                  <div>
-                    <Text style={{ fontSize: '18px', fontWeight: 600, color: '#262626' }}>
-                      {schema?.tables.length || 0}
-                    </Text>
-                  </div>
-                </Card>
-                <Card 
-                  style={{ 
-                    textAlign: 'center', 
-                    flex: 1,
-                    borderRadius: '6px',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-                  }}
-                  bodyStyle={{ padding: '10px 12px' }}
-                >
-                  <div style={{ marginBottom: '2px' }}>
-                    <Text style={{ fontSize: '11px', color: '#8c8c8c', fontWeight: 500 }}>VIEWS</Text>
-                  </div>
-                  <div>
-                    <Text style={{ fontSize: '18px', fontWeight: 600, color: '#262626' }}>
-                      {schema?.views.length || 0}
-                    </Text>
-                  </div>
-                </Card>
-                <Card 
-                  style={{ 
-                    textAlign: 'center', 
-                    flex: 1,
-                    borderRadius: '6px',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-                  }}
-                  bodyStyle={{ padding: '10px 12px' }}
-                >
-                  <div style={{ marginBottom: '2px' }}>
-                    <Text style={{ fontSize: '11px', color: '#8c8c8c', fontWeight: 500 }}>ROWS</Text>
-                  </div>
-                  <div>
-                    <Text style={{ fontSize: '18px', fontWeight: 600, color: '#262626' }}>
-                      {queryResult?.rowCount ?? 0}
-                    </Text>
-                  </div>
-                </Card>
-                <Card 
-                  style={{ 
-                    textAlign: 'center', 
-                    flex: 1,
-                    borderRadius: '6px',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-                  }}
-                  bodyStyle={{ padding: '10px 12px' }}
-                >
-                  <div style={{ marginBottom: '2px' }}>
-                    <Text style={{ fontSize: '11px', color: '#8c8c8c', fontWeight: 500 }}>TIME</Text>
-                  </div>
-                  <div>
-                    <Text style={{ fontSize: '18px', fontWeight: 600, color: '#262626' }}>
-                      {executionTime}
-                    </Text>
-                  </div>
-                </Card>
-              </div>
-
-              {/* SQL Query Panel */}
-              <Card
-                title={
-                  <Title level={4} style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>
-                    SQL EDITOR
-                  </Title>
-                }
-                extra={
-                  <Button
-                    type="primary"
-                    icon={<PlayCircleOutlined />}
-                    onClick={handleExecute}
-                    loading={queryLoading}
-                    size="large"
-                    style={{ 
-                      height: '40px', 
-                      paddingLeft: '20px', 
-                      paddingRight: '20px',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      fontWeight: 500
-                    }}
-                  >
-                    EXECUTE
-                  </Button>
-                }
-                style={{ 
-                  marginBottom: '10px',
-                  borderRadius: '8px',
-                  flexShrink: 0
-                }}
-                bodyStyle={{ padding: '20px' }}
-              >
-                <div style={{ marginBottom: '16px', minHeight: '280px', borderRadius: '4px', overflow: 'hidden' }}>
-                  <SQLEditor 
-                    value={sql} 
-                    onChange={(value) => setSql(value || '')} 
-                    height="280px"
-                    onExecute={handleExecute}
-                  />
-                </div>
-              </Card>
-
-              {/* Query Results */}
-              {queryResult && (
-                <Card
-                  style={{ 
-                    borderRadius: '8px',
-                    flex: 1,
-                    minHeight: '300px',
-                    marginBottom: '0',
-                    display: 'flex',
-                    flexDirection: 'column'
-                  }}
-                  bodyStyle={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
-                >
-                  <div style={{ flex: 1, overflow: 'auto' }}>
-                    <QueryResults result={queryResult} loading={queryLoading} />
-                  </div>
-                </Card>
-              )}
-            </>
-          ) : (
-            <Card style={{ borderRadius: '8px' }}>
-              <div style={{ textAlign: 'center', padding: '60px', color: '#999' }}>
-                <Title level={3} type="secondary">
-                  Please select a database to start querying
-                </Title>
-              </div>
-            </Card>
-          )}
-        </Content>
+        <QueryWorkspace
+          selectedDb={selectedDb}
+          schema={schema}
+          sql={sql}
+          queryResult={queryResult}
+          queryLoading={queryLoading}
+          executionTime={executionTime}
+          onSqlChange={setSql}
+          onExecuteQuery={executeQueryHandler}
+        />
       </Layout>
 
       {/* Add Database Modal */}

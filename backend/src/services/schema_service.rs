@@ -46,7 +46,7 @@ impl SchemaService {
         Ok(metadata)
     }
 
-    /// Retrieve schema from PostgreSQL database
+    /// Retrieve schema from `PostgreSQL` database
     async fn retrieve_from_database(&self, url: &str, db_name: &str) -> Result<SchemaMetadata, AppError> {
         if !url.starts_with("postgres://") && !url.starts_with("postgresql://") {
             return Err(AppError::ValidationError(
@@ -58,131 +58,30 @@ impl SchemaService {
 
         // Get all tables
         let table_names: Vec<String> = sqlx::query_scalar(
-            "SELECT table_name FROM information_schema.tables 
-             WHERE table_schema = 'public' AND table_type = 'BASE TABLE' 
+            "SELECT table_name FROM information_schema.tables
+             WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
              ORDER BY table_name"
         )
         .fetch_all(&pool)
         .await?;
 
         let mut tables = Vec::new();
-
         for table_name in table_names {
-            // Get columns for this table
-            let columns: Vec<(String, String, bool, Option<String>)> = sqlx::query(
-                "SELECT column_name, data_type, is_nullable = 'YES' as nullable, column_default 
-                 FROM information_schema.columns 
-                 WHERE table_schema = 'public' AND table_name = $1 
-                 ORDER BY ordinal_position"
-            )
-            .bind(&table_name)
-            .map(|row: sqlx::postgres::PgRow| {
-                (
-                    row.get(0),
-                    row.get(1),
-                    row.get(2),
-                    row.get(3),
-                )
-            })
-            .fetch_all(&pool)
-            .await?;
-
-            // Get primary key columns
-            let primary_key: Vec<String> = sqlx::query_scalar(
-                "SELECT kcu.column_name 
-                 FROM information_schema.table_constraints tc
-                 JOIN information_schema.key_column_usage kcu 
-                     ON tc.constraint_name = kcu.constraint_name
-                 WHERE tc.table_schema = 'public' 
-                     AND tc.table_name = $1 
-                     AND tc.constraint_type = 'PRIMARY KEY'
-                 ORDER BY kcu.ordinal_position"
-            )
-            .bind(&table_name)
-            .fetch_all(&pool)
-            .await?;
-
-            // Get row count for this table
-            let row_count: Option<u64> = match sqlx::query_scalar::<_, i64>(
-                &format!("SELECT COUNT(*) FROM \"{}\"", table_name)
-            )
-            .fetch_one(&pool)
-            .await
-            {
-                Ok(count) => Some(count as u64),
-                Err(e) => {
-                    eprintln!("Failed to get row count for table {}: {}", table_name, e);
-                    None
-                }
-            };
-
-            let column_infos: Vec<ColumnInfo> = columns
-                .into_iter()
-                .map(|(name, data_type, nullable, default_value)| {
-                    ColumnInfo {
-                        name,
-                        data_type,
-                        nullable,
-                        default_value: default_value.map(|v| v.to_string()),
-                    }
-                })
-                .collect();
-
-            tables.push(TableInfo {
-                name: table_name,
-                columns: column_infos,
-                primary_key: if primary_key.is_empty() { None } else { Some(primary_key) },
-                row_count,
-            });
+            tables.push(Self::fetch_table_info(&pool, &table_name).await?);
         }
 
         // Get all views
         let view_names: Vec<String> = sqlx::query_scalar(
-            "SELECT table_name FROM information_schema.views 
-             WHERE table_schema = 'public' 
+            "SELECT table_name FROM information_schema.views
+             WHERE table_schema = 'public'
              ORDER BY table_name"
         )
         .fetch_all(&pool)
         .await?;
 
         let mut views = Vec::new();
-
         for view_name in view_names {
-            // Get columns for this view
-            let columns: Vec<(String, String, bool, Option<String>)> = sqlx::query(
-                "SELECT column_name, data_type, is_nullable = 'YES' as nullable, column_default 
-                 FROM information_schema.columns 
-                 WHERE table_schema = 'public' AND table_name = $1 
-                 ORDER BY ordinal_position"
-            )
-            .bind(&view_name)
-            .map(|row: sqlx::postgres::PgRow| {
-                (
-                    row.get(0),
-                    row.get(1),
-                    row.get(2),
-                    row.get(3),
-                )
-            })
-            .fetch_all(&pool)
-            .await?;
-
-            let column_infos: Vec<ColumnInfo> = columns
-                .into_iter()
-                .map(|(name, data_type, nullable, default_value)| {
-                    ColumnInfo {
-                        name,
-                        data_type,
-                        nullable,
-                        default_value: default_value.map(|v| v.to_string()),
-                    }
-                })
-                .collect();
-
-            views.push(ViewInfo {
-                name: view_name,
-                columns: column_infos,
-            });
+            views.push(Self::fetch_view_info(&pool, &view_name).await?);
         }
 
         Ok(SchemaMetadata {
@@ -193,9 +92,146 @@ impl SchemaService {
         })
     }
 
-    /// Get cached metadata from SQLite
+    /// Fetch information for a single table
+    async fn fetch_table_info(pool: &PgPool, table_name: &str) -> Result<TableInfo, AppError> {
+        // Get columns for this table
+        let columns: Vec<(String, String, bool, Option<String>)> = sqlx::query(
+            "SELECT column_name, data_type, is_nullable = 'YES' as nullable, column_default
+             FROM information_schema.columns
+             WHERE table_schema = 'public' AND table_name = $1
+             ORDER BY ordinal_position"
+        )
+        .bind(table_name)
+        .map(|row: sqlx::postgres::PgRow| {
+            (
+                row.get(0),
+                row.get(1),
+                row.get(2),
+                row.get(3),
+            )
+        })
+        .fetch_all(pool)
+        .await?;
+
+        // Get primary key columns
+        let primary_key: Vec<String> = sqlx::query_scalar(
+            "SELECT kcu.column_name
+             FROM information_schema.table_constraints tc
+             JOIN information_schema.key_column_usage kcu
+                 ON tc.constraint_name = kcu.constraint_name
+             WHERE tc.table_schema = 'public'
+                 AND tc.table_name = $1
+                 AND tc.constraint_type = 'PRIMARY KEY'
+             ORDER BY kcu.ordinal_position"
+        )
+        .bind(table_name)
+        .fetch_all(pool)
+        .await?;
+
+        // Get row count for this table
+        let row_count = Self::fetch_table_row_count(pool, table_name).await;
+
+        let column_infos: Vec<ColumnInfo> = columns
+            .into_iter()
+            .map(|(name, data_type, nullable, default_value)| {
+                ColumnInfo {
+                    name,
+                    data_type,
+                    nullable,
+                    default_value,
+                }
+            })
+            .collect();
+
+        Ok(TableInfo {
+            name: table_name.to_string(),
+            columns: column_infos,
+            primary_key: if primary_key.is_empty() { None } else { Some(primary_key) },
+            row_count,
+        })
+    }
+
+    /// Fetch row count for a table (with validation and error handling)
+    async fn fetch_table_row_count(pool: &PgPool, table_name: &str) -> Option<u64> {
+        // Validate table name to prevent SQL injection
+        if !is_valid_identifier(table_name) {
+            tracing::warn!(table = %table_name, "invalid table name, skipping row count");
+            return None;
+        }
+
+        match sqlx::query_scalar::<_, i64>(
+            &format!("SELECT COUNT(*) FROM \"{table_name}\"")
+        )
+        .fetch_one(pool)
+        .await
+        {
+            Ok(count) => {
+                #[allow(clippy::cast_sign_loss)]
+                if count >= 0 {
+                    Some(count as u64)
+                } else {
+                    tracing::warn!(table = %table_name, count = count, "negative row count");
+                    None
+                }
+            }
+            Err(e) => {
+                tracing::warn!(
+                    table = %table_name,
+                    error = ?e,
+                    "failed to get row count"
+                );
+                None
+            }
+        }
+    }
+
+    /// Fetch information for a single view
+    async fn fetch_view_info(pool: &PgPool, view_name: &str) -> Result<ViewInfo, AppError> {
+        // Get columns for this view
+        let columns: Vec<(String, String, bool, Option<String>)> = sqlx::query(
+            "SELECT column_name, data_type, is_nullable = 'YES' as nullable, column_default
+             FROM information_schema.columns
+             WHERE table_schema = 'public' AND table_name = $1
+             ORDER BY ordinal_position"
+        )
+        .bind(view_name)
+        .map(|row: sqlx::postgres::PgRow| {
+            (
+                row.get(0),
+                row.get(1),
+                row.get(2),
+                row.get(3),
+            )
+        })
+        .fetch_all(pool)
+        .await?;
+
+        let column_infos: Vec<ColumnInfo> = columns
+            .into_iter()
+            .map(|(name, data_type, nullable, default_value)| {
+                ColumnInfo {
+                    name,
+                    data_type,
+                    nullable,
+                    default_value,
+                }
+            })
+            .collect();
+
+        Ok(ViewInfo {
+            name: view_name.to_string(),
+            columns: column_infos,
+        })
+    }
+
+    /// Get cached metadata from `SQLite`
     fn get_cached_metadata(&self, db_name: &str) -> Result<SchemaMetadata, AppError> {
-        let conn = self.sqlite_conn.lock().unwrap();
+        let conn = self.sqlite_conn.lock()
+            .map_err(|e| {
+                tracing::error!(error = ?e, "SQLite mutex poisoned");
+                AppError::DatabaseError(format!("Failed to acquire lock: {e:?}"))
+            })?;
+
         let mut stmt = conn.prepare(
             "SELECT table_name, table_type, metadata_json FROM schema_metadata WHERE db_name = ?1"
         )?;
@@ -227,11 +263,11 @@ impl SchemaService {
                 let primary_key = metadata
                     .get("primaryKey")
                     .and_then(|v| v.as_array())
-                    .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect());
+                    .map(|arr| arr.iter().filter_map(|v| v.as_str().map(std::string::ToString::to_string)).collect());
 
                 let row_count = metadata
                     .get("rowCount")
-                    .and_then(|v| v.as_u64());
+                    .and_then(serde_json::Value::as_u64);
 
                 tables.push(TableInfo {
                     name: table_name,
@@ -257,14 +293,22 @@ impl SchemaService {
 
     /// Clear cache for a database
     fn clear_cache(&self, db_name: &str) -> Result<(), AppError> {
-        let conn = self.sqlite_conn.lock().unwrap();
+        let conn = self.sqlite_conn.lock()
+            .map_err(|e| {
+                tracing::error!(error = ?e, "SQLite mutex poisoned");
+                AppError::DatabaseError(format!("Failed to acquire lock: {e:?}"))
+            })?;
         conn.execute("DELETE FROM schema_metadata WHERE db_name = ?1", [db_name])?;
         Ok(())
     }
 
-    /// Cache metadata in SQLite
+    /// Cache metadata in `SQLite`
     fn cache_metadata(&self, db_name: &str, metadata: &SchemaMetadata) -> Result<(), AppError> {
-        let conn = self.sqlite_conn.lock().unwrap();
+        let conn = self.sqlite_conn.lock()
+            .map_err(|e| {
+                tracing::error!(error = ?e, "SQLite mutex poisoned");
+                AppError::DatabaseError(format!("Failed to acquire lock: {e:?}"))
+            })?;
         // Delete existing cache
         conn.execute("DELETE FROM schema_metadata WHERE db_name = ?1", [db_name])?;
 
@@ -312,5 +356,14 @@ impl SchemaService {
 
         Ok(())
     }
+}
+
+/// Validate that a string is a valid `PostgreSQL` identifier
+/// This prevents SQL injection when using identifiers in format! macros
+fn is_valid_identifier(name: &str) -> bool {
+    !name.is_empty()
+        && name.len() <= 63 // PostgreSQL identifier length limit
+        && name.chars().all(|c| c.is_alphanumeric() || c == '_')
+        && name.chars().next().is_some_and(|c| !c.is_ascii_digit()) // Can't start with digit
 }
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Table, Typography, Empty } from 'antd';
-import { QueryResponse } from '../types/query';
+import { QueryResponse, CellValue } from '../types/query';
 
 const { Text } = Typography;
 
@@ -42,7 +42,7 @@ const QueryResults: React.FC<QueryResultsProps> = ({ result, loading = false }) 
     title: col,
     dataIndex: col,
     key: col,
-    render: (text: any) => {
+    render: (text: CellValue) => {
       if (text === null || text === undefined) {
         return <Text type="secondary">NULL</Text>;
       }
@@ -54,7 +54,7 @@ const QueryResults: React.FC<QueryResultsProps> = ({ result, loading = false }) 
   }));
 
   const dataSource = result.rows.map((row, index) => {
-    const record: any = { key: index };
+    const record: Record<string, CellValue> = { key: index };
     result.columns.forEach((col, colIndex) => {
       record[col] = row[colIndex];
     });

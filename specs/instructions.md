@@ -54,3 +54,16 @@ POST /api/v1/dbs/{name}/query/natural
 ```
 
 仔细阅读当前文件夹下的代码，然后运行后端和前端，根据./fixtures/test.rest 用 curl 测试后端已实现的路由，确保所有的unit test 都通过
+
+postgres://postgres:postgres@localhost:5432/chat
+## 前端风格
+
+
+# code review command
+帮我参考 @.cursor/commands/speckit.specify.md 的结构， think ultra hard, 构建一个对 Rust 和 Typescript 代码进行深度代码审查的命令，放在 @.claude/commands/ 下， 主要考虑几个方面：
+
+- 架构和设计：是否考虑 Rust 和 Typescript 的架构和设计最佳实践？是否有清晰的接口设计？是否考虑一定程度的可扩展性
+- KISS 原则
+- 代码质量： DRY，YAGNI，SOLID，etc. 函数原则上不超过 150 行，参数原则上不超过 7 个。
+- 使用 builder 模式
+- 命名行使用power Shell

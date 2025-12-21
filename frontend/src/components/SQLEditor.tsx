@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import Editor, { Monaco } from '@monaco-editor/react';
+import { editor as MonacoEditor } from 'monaco-editor';
 
 interface SQLEditorProps {
   value: string;
@@ -9,11 +10,11 @@ interface SQLEditorProps {
 }
 
 const SQLEditor: React.FC<SQLEditorProps> = ({ value, onChange, height = '300px', onExecute }) => {
-  const editorRef = useRef<any>(null);
+  const editorRef = useRef<MonacoEditor.IStandaloneCodeEditor | null>(null);
 
-  const handleEditorDidMount = (editor: any, monaco: Monaco) => {
+  const handleEditorDidMount = (editor: MonacoEditor.IStandaloneCodeEditor, monaco: Monaco) => {
     editorRef.current = editor;
-    
+
     // Add Ctrl+Enter / Cmd+Enter shortcut
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
       if (onExecute) {

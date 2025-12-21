@@ -3,6 +3,30 @@ name = "db-query-backend"
 version = "0.1.0"
 edition = "2024"
 
+[lints.clippy]
+# Deny common mistakes
+unwrap_used = "warn"
+expect_used = "warn"
+panic = "warn"
+
+# Pedantic lints (generally good practices)
+pedantic = { level = "warn", priority = -1 }
+
+# Allow some pedantic lints that are too noisy
+module_name_repetitions = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+format_push_string = "allow"
+
+# Performance lints
+perf = { level = "warn", priority = -1 }
+
+# Suspicious patterns
+suspicious = { level = "warn", priority = -1 }
+
+[lints.rust]
+unsafe_code = "forbid"
+
 [dependencies]
 # Web framework
 axum = { version = "0.8", features = ["macros", "json"] }

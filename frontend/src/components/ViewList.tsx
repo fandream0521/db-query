@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Collapse, Tag, Typography, Space } from 'antd';
 import { ViewInfo } from '../types/schema';
 
-const { Panel } = Collapse;
 const { Text } = Typography;
 
 interface ViewListProps {

@@ -11,6 +11,7 @@ pub struct DatabaseConnection {
 }
 
 impl DatabaseConnection {
+    #[must_use]
     #[allow(dead_code)]
     pub fn new(name: String, url: String) -> Self {
         let now = Utc::now().to_rfc3339();
@@ -28,13 +29,15 @@ impl DatabaseConnection {
     }
 }
 
-impl From<&rusqlite::Row<'_>> for DatabaseConnection {
-    fn from(row: &rusqlite::Row) -> Self {
-        Self {
-            name: row.get(0).unwrap(),
-            url: row.get(1).unwrap(),
-            created_at: row.get(2).unwrap(),
-            updated_at: row.get(3).unwrap(),
-        }
+impl TryFrom<&rusqlite::Row<'_>> for DatabaseConnection {
+    type Error = rusqlite::Error;
+
+    fn try_from(row: &rusqlite::Row) -> Result<Self, Self::Error> {
+        Ok(Self {
+            name: row.get(0)?,
+            url: row.get(1)?,
+            created_at: row.get(2)?,
+            updated_at: row.get(3)?,
+        })
     }
 }

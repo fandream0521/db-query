@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pwsh -Command \"if \\(!\\(Test-Path ''.claude/commands''\\)\\) { New-Item -ItemType Directory -Path ''.claude/commands'' -Force }\")",
+      "Bash(pwsh -Command:*)",
+      "Bash(cargo build:*)",
+      "Bash(cargo test:*)",
+      "Bash(cargo clippy:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(npm run build:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm start)"
+    ]
+  }
+}

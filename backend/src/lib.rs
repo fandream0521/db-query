@@ -7,4 +7,5 @@ pub mod models;
 pub mod services;
 pub mod api;
 pub mod utils;
+pub mod types;
 
